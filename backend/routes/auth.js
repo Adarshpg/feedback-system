@@ -72,6 +72,15 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (err) {
+    // Handle duplicate key error (E11000)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyValue)[0];
+      const message = `An account with this ${field} already exists.`;
+      console.error(`❌ Duplicate key error for ${field}:`, err.keyValue);
+      return res.status(400).json({ success: false, message });
+    }
+    
+    // Handle other errors
     return handleError(res, 500, 'Registration failed', err);
   }
 });
