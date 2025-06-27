@@ -160,6 +160,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const staticPath = path.join(__dirname, '../frontend/build');
@@ -174,14 +182,6 @@ if (process.env.NODE_ENV === 'production') {
     });
   });
 }
-
-// 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
-});
 
 // Global error handler
 app.use((err, req, res, next) => {
