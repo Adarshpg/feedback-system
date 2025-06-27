@@ -4,61 +4,79 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 
 // Initialize express app
 const app = express();
 
+// Validate required environment variables
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+requiredEnvVars.forEach(env => {
+  if (!process.env[env]) {
+    console.error(`❌ Required environment variable ${env} is not set`);
+    process.exit(1);
+  }
+});
+
 // Enhanced security middleware
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '10kb' }));
-app.use(morgan('dev')); // HTTP request logger
+app.use(morgan('dev'));
 
 // Log environment info
-console.log('Environment:', process.env.NODE_ENV || 'development');
-console.log('MongoDB URI:', process.env.MONGODB_URI ? '***SET***' : 'NOT SET');
-console.log('Server will run on port:', process.env.PORT || 5000);
+console.log('🚀 Starting server...');
+console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🔗 MongoDB URI: ${process.env.MONGODB_URI ? '✅ Set' : '❌ NOT SET'}`);
+console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SET'}`);
 
 // Database connection with enhanced error handling
-const connectDB = async () => {
+const connectDB = async (retryCount = 0) => {
+  const maxRetries = 5;
+  const retryDelay = 5000; // 5 seconds
+
   try {
     if (!process.env.MONGODB_URI) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    console.log('Attempting to connect to MongoDB...');
+    console.log(`🔌 Attempting to connect to MongoDB (Attempt ${retryCount + 1}/${maxRetries})...`);
     
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      maxPoolSize: 10,
     });
 
     console.log('✅ MongoDB connected successfully');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
-    // Retry connection after 5 seconds
-    console.log('Retrying connection in 5 seconds...');
-    setTimeout(connectDB, 5000);
+    console.error(`❌ MongoDB connection error: ${err.message}`);
+    
+    if (retryCount < maxRetries - 1) {
+      console.log(`⏳ Retrying connection in ${retryDelay / 1000} seconds...`);
+      setTimeout(() => connectDB(retryCount + 1), retryDelay);
+    } else {
+      console.error('❌ Max retries reached. Could not connect to MongoDB.');
+      process.exit(1);
+    }
   }
 };
 
 // MongoDB event listeners
 mongoose.connection.on('connected', () => {
-  console.log('✅ Mongoose connected to DB');
+  console.log('✅ Mongoose connected to MongoDB');
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('❌ Mongoose connection error:', err.message);
+  console.error(`❌ Mongoose connection error: ${err.message}`);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('ℹ️ Mongoose disconnected');
-  // Attempt to reconnect
-  setTimeout(connectDB, 5000);
+  console.log('ℹ️  Mongoose disconnected from MongoDB');
 });
 
 // Initial connection
@@ -70,19 +88,31 @@ app.use('/api/feedback', feedbackRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const status = dbStatus === 'connected' ? 'healthy' : 'unhealthy';
+  
   res.status(200).json({
-    status: 'success',
-    message: 'Server is running',
+    status,
     timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: dbStatus,
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
   });
 });
 
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+  });
+}
+
 // 404 handler
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({
     status: 'error',
-    message: `Can't find ${req.originalUrl} on this server!`
+    message: `Cannot ${req.method} ${req.originalUrl}`,
   });
 });
 
@@ -91,20 +121,22 @@ app.use((err, req, res, next) => {
   console.error('🔥 Error:', err.stack);
   
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Something went wrong!';
+  const message = err.message || 'Internal Server Error';
   
   res.status(statusCode).json({
     status: 'error',
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      error: err 
+    })
   });
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  // Close server & exit process
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED REJECTION! Shutting down...');
+  console.error('Unhandled Rejection at:', promise, 'Reason:', reason);
   server.close(() => {
     process.exit(1);
   });
@@ -112,14 +144,14 @@ process.on('unhandledRejection', (err) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server is running on port ${PORT}`);
-  console.log(`🟢 Environment: ${process.env.NODE_ENV || 'development'}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error('🔥 UNCAUGHT EXCEPTION! Shutting down...');
   console.error(err.name, err.message);
   server.close(() => {
     process.exit(1);
@@ -128,8 +160,15 @@ process.on('uncaughtException', (err) => {
 
 // Handle SIGTERM
 process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+  console.log('👋 SIGTERM received. Shutting down gracefully...');
   server.close(() => {
     console.log('💥 Process terminated!');
+    process.exit(0);
   });
+});
+
+// Handle process exit
+process.on('exit', (code) => {
+  console.log(`Process exiting with code ${code}`);
+  mongoose.connection.close();
 });
