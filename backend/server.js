@@ -20,9 +20,22 @@ requiredEnvVars.forEach(env => {
   }
 });
 
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'https://feedback.medinitechnologies.in',
+    'http://localhost:3000',  // Keep for local development
+    'http://localhost:5000'   // For local API testing
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
 // Enhanced security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(morgan('dev'));
 
