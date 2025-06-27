@@ -5,11 +5,21 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+const compression = require('compression');
+
+// Import routes
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 
 // Initialize express app
 const app = express();
+
+// Trust proxy for production
+app.set('trust proxy', 1);
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
@@ -20,24 +30,52 @@ requiredEnvVars.forEach(env => {
   }
 });
 
-// CORS configuration
+// Enable CORS
 const corsOptions = {
   origin: [
     'https://feedback.medinitechnologies.in',
-    'http://localhost:3000',  // Keep for local development
-    'http://localhost:5000'   // For local API testing
+    'http://localhost:3000',
+    'http://localhost:5000'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  maxAge: 600
 };
 
-// Enhanced security middleware
+// Security middleware
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
-app.use(morgan('dev'));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+app.use(xss());
+
+// Prevent parameter pollution
+app.use(hpp({
+  whitelist: [] // Add any parameters you want to whitelist
+}));
+
+// Compress all responses
+app.use(compression());
+
+// Development logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api', limiter);
 
 // Log environment info
 console.log('🚀 Starting server...');
@@ -48,7 +86,7 @@ console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SE
 // Database connection with enhanced error handling
 const connectDB = async (retryCount = 0) => {
   const maxRetries = 5;
-  const retryDelay = 5000; // 5 seconds
+  const retryDelay = 5000;
 
   try {
     if (!process.env.MONGODB_URI) {
@@ -95,12 +133,21 @@ mongoose.connection.on('disconnected', () => {
 // Initial connection
 connectDB();
 
-// Routes
+// Test route
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'API is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   const status = dbStatus === 'connected' ? 'healthy' : 'unhealthy';
   
@@ -115,17 +162,24 @@ app.get('/health', (req, res) => {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  const staticPath = path.join(__dirname, '../frontend/build');
+  app.use(express.static(staticPath));
+  
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+    res.sendFile(path.join(staticPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).send('Error loading the application');
+      }
+    });
   });
 }
 
-// 404 handler
-app.use((req, res) => {
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     status: 'error',
-    message: `Cannot ${req.method} ${req.originalUrl}`,
+    message: `Cannot ${req.method} ${req.originalUrl}`
   });
 });
 
@@ -146,6 +200,14 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start server
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 Server URL: http://localhost:${PORT}`);
+});
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ UNHANDLED REJECTION! Shutting down...');
@@ -153,13 +215,6 @@ process.on('unhandledRejection', (reason, promise) => {
   server.close(() => {
     process.exit(1);
   });
-});
-
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Handle uncaught exceptions
@@ -185,3 +240,5 @@ process.on('exit', (code) => {
   console.log(`Process exiting with code ${code}`);
   mongoose.connection.close();
 });
+
+module.exports = app;
