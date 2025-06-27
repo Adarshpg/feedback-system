@@ -1,76 +1,70 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { registerValidation, loginValidation } = require('../validation');
 
-// Helper function to handle errors
-const handleError = (res, status, message, error = null) => {
-  console.error(`[${new Date().toISOString()}] ${message}`, error || '');
-  return res.status(status).json({ 
-    success: false, 
-    message: process.env.NODE_ENV === 'production' 
-      ? message 
-      : error?.message || message 
+const router = express.Router();
+
+// Unified error response helper
+const handleError = (res, status = 500, message = 'Something went wrong', error = null) => {
+  console.error(`[${new Date().toISOString()}] ❌ ${message}`, error || '');
+  return res.status(status).json({
+    success: false,
+    message: process.env.NODE_ENV === 'production' ? message : error?.message || message
   });
 };
 
-// Register
+// ✅ Register Route
 router.post('/register', async (req, res) => {
   try {
-    console.log('Registration attempt:', { 
-      email: req.body.email,
-      time: new Date().toISOString() 
-    });
+    const { fullName, email, rollNumber, collegeName, contactNo, course, semester, password } = req.body;
 
-    // Validate data
+    console.log(`🔐 Registering user: ${email} | ${new Date().toISOString()}`);
+
+    // Validate input
+    console.log('Received registration data:', JSON.stringify(req.body, null, 2));
+
+    // Validate input
     const { error } = registerValidation(req.body);
     if (error) {
-      return res.status(400).json({ 
-        success: false, 
-        message: error.details[0].message 
-      });
+      console.error('Validation failed:', JSON.stringify(error.details, null, 2));
+      return res.status(400).json({ success: false, message: error.details[0].message });
     }
 
-    // Check if user already exists
-    const emailExist = await User.findOne({ email: req.body.email });
-    if (emailExist) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already exists' 
-      });
-    }
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ success: false, message: 'Email already exists' });
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    // Create and save user
     const user = new User({
-      fullName: req.body.fullName,
-      email: req.body.email,
-      rollNumber: req.body.rollNumber,
-      collegeName: req.body.collegeName,
-      contactNo: req.body.contactNo,
-      course: req.body.course,
-      semester: req.body.semester,
+      fullName,
+      email,
+      rollNumber,
+      collegeName,
+      contactNo,
+      course,
+      semester,
       password: hashedPassword
     });
 
     const savedUser = await user.save();
-    
-    // Create token
+
+    // Create JWT Token
     const token = jwt.sign(
-      { _id: savedUser._id }, 
+      { _id: savedUser._id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
-    // Don't send password back
-    const { password, ...userWithoutPassword } = savedUser.toObject();
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = savedUser.toObject();
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Registration successful',
       user: userWithoutPassword,
@@ -78,56 +72,37 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (err) {
-    return handleError(
-      res, 
-      500, 
-      'Registration failed', 
-      err
-    );
+    return handleError(res, 500, 'Registration failed', err);
   }
 });
 
-// Login
+// ✅ Login Route
 router.post('/login', async (req, res) => {
   try {
-    // Validate data
+    const { email, password } = req.body;
+
+    // Validate input
     const { error } = loginValidation(req.body);
-    if (error) {
-      return res.status(400).json({ 
-        success: false, 
-        message: error.details[0].message 
-      });
-    }
+    if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-    // Check if email exists
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid email or password' // Generic message for security
-      });
-    }
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid email or password' });
 
-    // Check password
-    const validPass = await bcrypt.compare(req.body.password, user.password);
-    if (!validPass) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid email or password' // Generic message for security
-      });
-    }
+    // Verify password
+    const validPass = await bcrypt.compare(password, user.password);
+    if (!validPass) return res.status(400).json({ success: false, message: 'Invalid email or password' });
 
-    // Create token
+    // Generate JWT
     const token = jwt.sign(
-      { _id: user._id }, 
+      { _id: user._id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
-    // Don't send password back
-    const { password, ...userWithoutPassword } = user.toObject();
+    const { password: _, ...userWithoutPassword } = user.toObject();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Login successful',
       token,
@@ -135,12 +110,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    return handleError(
-      res, 
-      500, 
-      'Login failed', 
-      err
-    );
+    return handleError(res, 500, 'Login failed', err);
   }
 });
 

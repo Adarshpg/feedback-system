@@ -54,8 +54,13 @@ const StyledFormControl = styled(FormControl)({
 });
 
 const validationSchema = Yup.object({
-  fullName: Yup.string().required('Full Name is required'),
-  email: Yup.string().email('Invalid email address').required('Email is required'),
+  fullName: Yup.string()
+    .min(3, 'Full name must be at least 3 characters')
+    .required('Full Name is required'),
+  email: Yup.string()
+    .email('Invalid email address')
+    .min(6, 'Email must be at least 6 characters')
+    .required('Email is required'),
   rollNumber: Yup.string().required('Roll Number is required'),
   collegeName: Yup.string().required('College Name is required'),
   contactNo: Yup.string()
@@ -95,7 +100,11 @@ const Register = () => {
       setLoading(true);
 
       try {
-        const { confirmPassword, ...userData } = values;
+        const { confirmPassword, ...rest } = values;
+        const userData = {
+          ...rest,
+          semester: parseInt(rest.semester, 10) || null,
+        };
         const result = await register(userData);
         
         if (result.success) {
