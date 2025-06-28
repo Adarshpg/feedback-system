@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Get API base URL from environment variables
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback.medinitechnologies.in/';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback.medinitechnologies.in';
 
   // Login function
   const login = async (email, password) => {
