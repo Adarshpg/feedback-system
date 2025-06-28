@@ -49,7 +49,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Get API base URL from environment variables
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback.medinitechnologies.in';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const API_BASE_URL = isProduction 
+    ? 'https://feedback.medinitechnologies.in'
+    : 'http://localhost:5000';
+  
+  console.log('API Base URL:', API_BASE_URL); // For debugging
 
   // Login function
   const login = async (email, password) => {
