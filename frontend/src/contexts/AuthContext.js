@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Set base URL for API requests
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://feedback.medinitechnologies.in'
+  ? 'https://feedback-system-1-jqqj.onrender.com' // Render backend URL
   : 'http://localhost:5000';
 
 // Configure axios defaults

@@ -33,7 +33,8 @@ requiredEnvVars.forEach(env => {
 // Enable CORS
 const corsOptions = {
   origin: [
-    'https://feedback.medinitechnologies.in/',
+    'https://feedback.medinitechnologies.in',
+    'https://feedback-system-1-jqqj.onrender.com', // Render backend URL
     'http://localhost:3000',
     'http://localhost:5000'
   ],
