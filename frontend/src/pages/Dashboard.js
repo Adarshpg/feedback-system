@@ -25,35 +25,108 @@ import axios from 'axios';
 // Styled components using the new MUI v5 approach
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
-  marginTop: theme.spacing(2),
+  marginBottom: theme.spacing(4),
+  borderRadius: '12px',
+  background: 'linear-gradient(145deg, #ffffff, #f0f2f5)',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+  border: '1px solid rgba(0, 0, 0, 0.05)',
 }));
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  transition: 'transform 0.2s, box-shadow 0.2s',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  transition: 'all 0.3s ease-in-out',
+  border: '1px solid rgba(0, 0, 0, 0.05)',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[8],
+    transform: 'translateY(-5px)',
+    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1)',
+  },
+  '&.MuiCard-root': {
+    display: 'flex',
+    flexDirection: 'column',
   },
 }));
 
-const StyledCardContent = styled(CardContent)({
+const StyledCardContent = styled(CardContent)(({ theme }) => ({
   flexGrow: 1,
-});
+  padding: theme.spacing(3),
+  '&:last-child': {
+    paddingBottom: theme.spacing(3),
+  }
+}));
 
-const StyledProgress = styled(LinearProgress)({
-  height: 10,
-  borderRadius: 5,
-  margin: '16px 0',
-});
+const StyledProgress = styled(LinearProgress)(({ theme, value }) => ({
+  height: 12,
+  borderRadius: 6,
+  margin: '20px 0',
+  backgroundColor: theme.palette.grey[200],
+  '& .MuiLinearProgress-bar': {
+    borderRadius: 6,
+    background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+    boxShadow: `0 0 10px ${theme.palette.primary.light}`,
+  },
+}));
 
-const PhaseTitle = styled(Typography)({
+const PhaseTitle = styled(Typography)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  marginBottom: 8,
-});
+  marginBottom: theme.spacing(2),
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  '& .MuiChip-root': {
+    marginLeft: 'auto',
+    fontWeight: 500,
+    height: 24,
+  },
+}));
+
+const ProgressContainer = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  margin: theme.spacing(3, 0),
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 6,
+    padding: 2,
+    background: 'linear-gradient(90deg, #f5f7fa, #c3cfe2)',
+    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+    WebkitMaskComposite: 'xor',
+    maskComposite: 'exclude',
+    pointerEvents: 'none',
+  },
+}));
+
+const MilestoneDot = styled('div')(({ theme, active }) => ({
+  width: 16,
+  height: 16,
+  borderRadius: '50%',
+  backgroundColor: active ? theme.palette.primary.main : theme.palette.grey[300],
+  border: `3px solid ${active ? theme.palette.primary.light : '#fff'}`,
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  zIndex: 1,
+  boxShadow: active ? `0 0 0 4px ${theme.palette.primary.light}40` : 'none',
+  transition: 'all 0.3s ease',
+}));
+
+const MilestoneLabel = styled(Typography)(({ theme, active }) => ({
+  position: 'absolute',
+  top: 'calc(100% + 8px)',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+  fontWeight: active ? 600 : 400,
+  whiteSpace: 'nowrap',
+  fontSize: '0.75rem',
+}));
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -71,16 +144,19 @@ const Dashboard = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:5000/api/feedback/user-feedbacks', {
-          headers: {
-            'x-auth-token': token,
-          },
-        });
+        const [feedbacksResponse, statusResponse] = await Promise.all([
+          axios.get('http://localhost:5000/api/feedback/user-feedbacks', {
+            headers: { 'x-auth-token': token },
+          }),
+          axios.get('http://localhost:5000/api/feedback/status', {
+            headers: { 'x-auth-token': token },
+          })
+        ]);
 
-        // Convert array of feedbacks to an object with phase as key
+        // Convert array of feedbacks to an object with semester as key
         const feedbacksObj = {};
-        response.data.forEach(feedback => {
-          feedbacksObj[feedback.phase] = feedback;
+        feedbacksResponse.data.forEach(feedback => {
+          feedbacksObj[feedback.semester] = feedback;
         });
         
         setFeedbacks(feedbacksObj);
@@ -93,10 +169,42 @@ const Dashboard = () => {
     };
 
     fetchUserFeedbacks();
-  }, [navigate]);
+  }, [navigate, currentUser]);
 
+  // Calculate progress based on completed feedbacks
   const calculateProgress = () => {
-    return (Object.keys(feedbacks).length / 3) * 100;
+    const completedFeedbacks = Object.keys(feedbacks).length;
+    if (completedFeedbacks >= 3) return 100;
+    if (completedFeedbacks === 2) return 67;
+    if (completedFeedbacks === 1) return 33;
+    return 0;
+  };
+
+  // Determine which feedback form to show based on progress
+  const getAvailableFeedbacks = () => {
+    const completedCount = Object.keys(feedbacks).length;
+    
+    // If all 3 feedbacks are submitted, show all
+    if (completedCount >= 3) {
+      return [1, 2, 3].map(semester => ({
+        id: semester,
+        label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
+               semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
+               'Final Feedback (100% Complete)',
+        isSubmitted: !!feedbacks[semester],
+        isAvailable: true
+      }));
+    }
+    
+    // Otherwise, only show up to the next required feedback
+    return [1, 2, 3].map(semester => ({
+      id: semester,
+      label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
+             semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
+             'Final Feedback (100% Complete)',
+      isSubmitted: !!feedbacks[semester],
+      isAvailable: semester <= completedCount + 1
+    }));
   };
 
   if (loading) {
@@ -108,128 +216,349 @@ const Dashboard = () => {
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome, {currentUser?.fullName || 'User'}!
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ mb: 6 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom 
+          sx={{ 
+            fontWeight: 700, 
+            color: 'primary.main',
+            display: 'flex',
+            alignItems: 'center',
+            '&:after': {
+              content: '""',
+              flex: 1,
+              ml: 2,
+              height: '1px',
+              backgroundColor: 'divider',
+            }
+          }}
+        >
+          Welcome back, {currentUser?.fullName?.split(' ')[0] || 'Student'}! 👋
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-          Track your feedback progress and submit new feedback for each phase.
+        <Typography 
+          variant="h6" 
+          color="text.secondary" 
+          sx={{ 
+            fontWeight: 400,
+            maxWidth: '800px',
+            lineHeight: 1.6,
+            mb: 2
+          }}
+        >
+          Track your feedback progress and submit new feedback at key milestones of your course journey.
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 4,
+            borderRadius: 2,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            '& .MuiAlert-icon': {
+              fontSize: '1.5rem',
+              alignItems: 'center',
+            }
+          }}
+        >
           {error}
         </Alert>
       )}
 
-      <StyledPaper elevation={3}>
-        <Typography variant="h6" gutterBottom>
-          Your Progress
-        </Typography>
-        <Box sx={{ mt: 2, mb: 3 }}>
-          <StyledProgress
-            variant="determinate"
-            value={calculateProgress()}
+      <StyledPaper elevation={0}>
+        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+            Your Learning Journey
+          </Typography>
+          <Chip 
+            label={`${Object.keys(feedbacks).length} of 3 completed`}
+            color="primary"
+            variant="outlined"
+            sx={{ 
+              fontWeight: 600,
+              px: 1,
+              '& .MuiChip-label': {
+                px: 1.5,
+              }
+            }}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body2" color="text.secondary">
-              {Math.round(calculateProgress())}% Complete
+        </Box>
+        
+        <ProgressContainer>
+          <StyledProgress variant="determinate" value={calculateProgress()} />
+          
+          {/* Milestone Markers */}
+          <Box sx={{ position: 'relative', mt: 1 }}>
+            {[0, 33, 67, 100].map((milestone, index) => (
+              <React.Fragment key={index}>
+                <MilestoneDot 
+                  active={calculateProgress() >= milestone}
+                  style={{ left: `${milestone}%` }}
+                />
+                {index < 3 && (
+                  <MilestoneLabel 
+                    active={calculateProgress() >= [0, 33, 67, 100][index + 1]}
+                    style={{ left: `${milestone}%` }}
+                  >
+                    {['Start', '20%', '50%', '100%'][index]}
+                  </MilestoneLabel>
+                )}
+              </React.Fragment>
+            ))}
+          </Box>
+        </ProgressContainer>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              {Math.round(calculateProgress())}%
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {Object.keys(feedbacks).length} of 3 phases completed
+              Course Completion
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
+              {Object.keys(feedbacks).length}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Feedbacks Submitted
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'warning.main' }}>
+              {3 - Object.keys(feedbacks).length}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Pending Feedbacks
             </Typography>
           </Box>
         </Box>
       </StyledPaper>
 
-      <Grid container spacing={4}>
-        {[1, 2, 3].map((phase) => {
-          const isSubmitted = feedbacks[phase];
-          const isAvailable = phase === 1 || feedbacks[phase - 1];
-          
-          return (
-            <Grid item xs={12} md={4} key={phase}>
+      <Box sx={{ mb: 6 }}>
+        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
+          Course Feedback Milestones
+        </Typography>
+        <Grid container spacing={3}>
+          {getAvailableFeedbacks().map((feedback) => (
+            <Grid item xs={12} md={4} key={feedback.id}>
               <StyledCard 
                 sx={{ 
-                  opacity: isAvailable ? 1 : 0.7,
+                  opacity: feedback.isAvailable ? 1 : 0.7,
+                  height: '100%',
+                  background: theme => feedback.isAvailable 
+                    ? 'linear-gradient(145deg, #ffffff, #f8f9ff)'
+                    : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)',
                 }}
               >
                 <StyledCardContent>
                   <PhaseTitle variant="h6" component="h2">
-                    Phase {phase}
-                    {isSubmitted ? (
+                    {feedback.label.split(' (')[0]}
+                    {feedback.isSubmitted ? (
                       <Chip
-                        icon={<CheckCircleIcon />}
+                        icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
                         label="Submitted"
                         color="success"
+                        variant="outlined"
                         size="small"
-                        sx={{ ml: 'auto' }}
                       />
                     ) : (
                       <Chip
-                        icon={<WarningIcon />}
-                        label={isAvailable ? 'Pending' : 'Locked'}
-                        color={isAvailable ? 'warning' : 'default'}
+                        icon={<WarningIcon style={{ 
+                          color: feedback.isAvailable ? '#ed6c02' : '#9e9e9e' 
+                        }} />}
+                        label={feedback.isAvailable ? 'Pending' : 'Locked'}
+                        color={feedback.isAvailable ? 'warning' : 'default'}
+                        variant="outlined"
                         size="small"
-                        sx={{ ml: 'auto' }}
                       />
                     )}
                   </PhaseTitle>
                   
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    {phase === 1 
-                      ? 'Initial feedback after 20% course completion' 
-                      : phase === 2 
-                        ? 'Mid-term feedback after 50% course completion' 
-                        : 'Final feedback after 100% course completion'}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    mb: 2,
+                    '& .MuiLinearProgress-root': {
+                      flexGrow: 1,
+                      height: 6,
+                      borderRadius: 3,
+                      mr: 1,
+                    }
+                  }}>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={feedback.id === 1 ? 20 : feedback.id === 2 ? 50 : 100}
+                      color={feedback.isSubmitted ? 'success' : 'primary'}
+                      sx={{
+                        backgroundColor: theme => theme.palette.grey[200],
+                        '& .MuiLinearProgress-bar': {
+                          background: feedback.isSubmitted 
+                            ? 'linear-gradient(90deg, #4caf50, #81c784)'
+                            : 'linear-gradient(90deg, #1976d2, #64b5f6)',
+                        }
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
+                      {feedback.id === 1 ? '20%' : feedback.id === 2 ? '50%' : '100%'}
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
+                    {feedback.id === 1 
+                      ? 'Share your initial thoughts after completing the first 20% of the course.' 
+                      : feedback.id === 2 
+                        ? 'Provide mid-course feedback after reaching the 50% completion mark.'
+                        : 'Share your final thoughts after completing the entire course.'}
                   </Typography>
                   
-                  {isSubmitted ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Submitted on: {new Date(feedbacks[phase].submissionDate).toLocaleDateString()}
-                    </Typography>
+                  {feedback.isSubmitted ? (
+                    <Box sx={{ 
+                      backgroundColor: 'success.50',
+                      p: 1.5,
+                      borderRadius: 1,
+                      borderLeft: '4px solid',
+                      borderColor: 'success.main',
+                      mb: 2
+                    }}>
+                      <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
+                        <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+                        Submitted on {new Date(feedbacks[feedback.id].submissionDate).toLocaleDateString()}
+                      </Typography>
+                    </Box>
                   ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      {isAvailable 
-                        ? 'Ready to submit your feedback' 
-                        : 'Complete previous phase first'}
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: feedback.isAvailable ? 'warning.dark' : 'text.disabled',
+                        fontStyle: 'italic',
+                        mb: 2,
+                        minHeight: 40,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      {feedback.isAvailable 
+                        ? '✓ Ready to collect your feedback' 
+                        : '🔒 Complete previous milestone to unlock'}
                     </Typography>
                   )}
                 </StyledCardContent>
                 
-                <CardActions sx={{ p: 2 }}>
+                <CardActions sx={{ p: 2, pt: 0 }}>
                   <Button
-                    variant={isSubmitted ? 'outlined' : 'contained'}
-                    color="primary"
+                    variant={feedback.isSubmitted ? 'outlined' : 'contained'}
+                    color={feedback.isSubmitted ? 'inherit' : 'primary'}
                     fullWidth
-                    onClick={() => navigate(`/feedback/${phase}`)}
-                    disabled={!isAvailable}
+                    disabled={!feedback.isAvailable}
+                    onClick={() => navigate(`/feedback/${feedback.id}`)}
+                    sx={{
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: theme => `0 4px 12px ${theme.palette.primary.light}40`,
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: 'action.disabledBackground',
+                        color: 'text.disabled',
+                      },
+                    }}
+                    startIcon={feedback.isSubmitted ? <CheckCircleIcon /> : <WarningIcon />}
                   >
-                    {isSubmitted ? 'View Feedback' : 'Submit Feedback'}
+                    {feedback.isSubmitted ? 'View Submission' : 'Provide Feedback'}
                   </Button>
                 </CardActions>
               </StyledCard>
             </Grid>
-          );
-        })}
-      </Grid>
-      
-      <Box mt={4}>
-        <Paper elevation={3} style={{ padding: '1.5rem' }}>
-          <Typography variant="h6" gutterBottom>
-            Feedback Guidelines
-          </Typography>
-          <Typography paragraph>
-            Please provide honest and constructive feedback for each phase of the course. 
-            Your responses will help improve the course content and delivery.
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Note: Once submitted, feedback cannot be modified. Please review your responses before submission.
-          </Typography>
-        </Paper>
+          ))}
+        </Grid>
       </Box>
+      
+      <StyledPaper sx={{ background: 'linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%)' }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center' }}>
+          <Box sx={{ flex: 1, pr: { md: 4 } }}>
+            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 600, color: 'primary.dark' }}>
+              Your Feedback Matters
+            </Typography>
+            <Typography paragraph sx={{ color: 'text.secondary', mb: 2 }}>
+              We value your input! Your feedback helps us enhance the learning experience for you and future students.
+            </Typography>
+            <Box component="ul" sx={{ 
+              pl: 2, 
+              mb: 3,
+              '& li': {
+                mb: 1,
+                display: 'flex',
+                alignItems: 'flex-start',
+                '&:before': {
+                  content: '"✓"',
+                  color: 'success.main',
+                  fontWeight: 'bold',
+                  display: 'inline-block',
+                  width: '1.5em',
+                  ml: -1.5,
+                }
+              }
+            }}>
+              <li>Help improve course content and teaching methods</li>
+              <li>Influence future curriculum development</li>
+              <li>Make a difference for future students</li>
+            </Box>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              size="large" 
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                boxShadow: '0 4px 14px rgba(25, 118, 210, 0.2)',
+                '&:hover': {
+                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
+                },
+              }}
+              onClick={() => {
+                const nextFeedback = getAvailableFeedbacks().find(f => f.isAvailable && !f.isSubmitted);
+                if (nextFeedback) {
+                  navigate(`/feedback/${nextFeedback.id}`);
+                }
+              }}
+            >
+              {getAvailableFeedbacks().some(f => f.isAvailable && !f.isSubmitted) 
+                ? 'Submit Your Feedback Now' 
+                : 'View Your Submissions'}
+            </Button>
+          </Box>
+          <Box sx={{ 
+            flexShrink: 0, 
+            width: { xs: '100%', md: '40%' },
+            mt: { xs: 4, md: 0 },
+            textAlign: 'center',
+            '& img': {
+              maxWidth: '100%',
+              height: 'auto',
+              borderRadius: 2,
+              boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+            }
+          }}>
+            <img 
+              src="https://img.freepik.com/free-vector/feedback-concept-illustration_114360-4925.jpg" 
+              alt="Feedback illustration" 
+              style={{ maxHeight: '280px' }}
+            />
+          </Box>
+        </Box>
+      </StyledPaper>
     </Container>
   );
 };

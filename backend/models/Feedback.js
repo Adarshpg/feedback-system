@@ -6,11 +6,11 @@ const feedbackSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    phase: {
+    semester: {
         type: Number,
         required: true,
         min: 1,
-        max: 3
+        max: 8
     },
     answers: [{
         question: String,

@@ -64,8 +64,8 @@ const Root = styled('div')(({ theme }) => ({
   },
 }));
 
-// Sample questions for each phase
-const questionsByPhase = {
+// Sample questions for each semester
+const questionsBySemester = {
   1: [
     {
       id: 'q1',
@@ -159,12 +159,17 @@ const FeedbackForm = () => {
   const [answers, setAnswers] = useState({});
   const [formErrors, setFormErrors] = useState({});
 
-  const questions = questionsByPhase[phase] || [];
+  const questions = questionsBySemester[phase] || [];
   const totalSteps = questions.length;
 
   useEffect(() => {
-    // In a real app, you might want to check if the user has already submitted feedback for this phase
+    // In a real app, you might want to check if the user has already submitted feedback for this semester
     // and load their previous answers if they want to edit
+    
+    // Reset form when semester changes
+    setAnswers({});
+    setFormErrors({});
+    setActiveStep(0);
   }, [phase]);
 
   const handleNext = () => {
@@ -229,33 +234,33 @@ const FeedbackForm = () => {
         return;
       }
       
-      const response = await axios.post('http://localhost:5000/api/feedback/submit', 
+      const response = await axios.post(
+        'http://localhost:5000/api/feedback/submit',
         {
-          phase: parseInt(phase),
+          semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
-            question: questions.find(q => q.id === questionId)?.question || '',
-            answer: answer
+            question: questions.find(q => q.id === questionId)?.question || questionId,
+            answer
           }))
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'x-auth-token': token
+            'x-auth-token': token,
+            'Content-Type': 'application/json'
           }
         }
       );
       
-      if (response.data) {
-        setSuccess('Feedback submitted successfully!');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-      } else {
-        setError('Failed to submit feedback. Please try again.');
-      }
+      setSuccess('Thank you for your feedback!');
+      
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+      
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      setError('Failed to submit feedback. Please try again.');
+      setError(err.response?.data?.message || 'Failed to submit feedback. Please try again.');
     } finally {
       setSubmitLoading(false);
     }

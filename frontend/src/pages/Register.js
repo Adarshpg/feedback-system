@@ -42,9 +42,31 @@ const StyledSubmitButton = styled(Button)(({ theme }) => ({
 
 const StyledContainer = styled(Container)({
   marginTop: 4,
+  padding: theme => theme.spacing(3, 0),
+});
+
+const ContentSection = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  padding: theme.spacing(4),
+  backgroundColor: theme.palette.primary.main,
+  color: 'white',
+  borderRadius: theme.shape.borderRadius,
+  '& h2, & h3, & p': {
+    color: 'white',
+  },
+  '& ul': {
+    paddingLeft: theme.spacing(2),
+  },
+  '& li': {
+    marginBottom: theme.spacing(1),
+  },
+}));
+
+const FormSection = styled(Box)({
+  padding: theme => theme.spacing(0, 3),
 });
 
 const StyledFormControl = styled(FormControl)({
@@ -67,7 +89,7 @@ const validationSchema = Yup.object({
     .matches(/^[0-9]{10}$/, 'Contact number must be 10 digits')
     .required('Contact Number is required'),
   course: Yup.string().required('Course is required'),
-  semester: Yup.number().required('Semester is required').min(1).max(12),
+  semester: Yup.number().required('Semester is required').min(1, 'Semester must be at least 1').max(8, 'Semester cannot be greater than 8'),
   password: Yup.string()
     .min(6, 'Password must be at least 6 characters')
     .required('Password is required'),
@@ -123,22 +145,17 @@ const Register = () => {
     },
   });
 
-  const semesters = Array.from({ length: 12 }, (_, i) => i + 1);
+  const semesters = Array.from({ length: 8 }, (_, i) => i + 1); // Semesters 1-8
 
   return (
-    <StyledContainer component="main" maxWidth="sm">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: '100%',
-        }}
-      >
-        <StyledPaper elevation={3}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Create an Account
-          </Typography>
+    <StyledContainer component="main" maxWidth="lg">
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={6}>
+          <FormSection>
+            <StyledPaper elevation={3}>
+              <Typography component="h1" variant="h5" align="center" gutterBottom>
+                Create an Account
+              </Typography>
           
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
@@ -319,13 +336,54 @@ const Register = () => {
             </StyledSubmitButton>
             
             <Box textAlign="center" mt={2}>
-              <Link component={RouterLink} to="/login" variant="body2">
-                Already have an account? Sign in
-              </Link>
+              <Typography variant="body2">
+                Already have an account?{' '}
+                <Link component={RouterLink} to="/login" variant="body2">
+                  Sign In
+                </Link>
+              </Typography>
             </Box>
           </StyledForm>
-        </StyledPaper>
-      </Box>
+            </StyledPaper>
+          </FormSection>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <ContentSection>
+            <Typography variant="h4" gutterBottom>
+              Welcome to Our Feedback System
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Join thousands of students who are improving their learning experience through valuable feedback.
+            </Typography>
+            
+            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+              Why Register?
+            </Typography>
+            <ul>
+              <li>Provide feedback at key milestones of your course</li>
+              <li>Help improve course content and delivery</li>
+              <li>Track your feedback history</li>
+              <li>Contribute to better education for everyone</li>
+            </ul>
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+              How It Works
+            </Typography>
+            <ol>
+              <li>Create your account</li>
+              <li>Complete your profile</li>
+              <li>Submit feedback at key course milestones</li>
+              <li>Help us improve education quality</li>
+            </ol>
+
+            <Box mt={4}>
+              <Typography variant="body2" fontStyle="italic">
+                Your feedback helps us create a better learning environment for everyone.
+              </Typography>
+            </Box>
+          </ContentSection>
+        </Grid>
+      </Grid>
     </StyledContainer>
   );
 };
