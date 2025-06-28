@@ -1,13 +1,12 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
-// Set base URL for API requests
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://feedback-system-1-jqqj.onrender.com' // Render backend URL
-  : 'http://localhost:5000';
+// Set base URL for API requests from environment variables
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
+console.log('Using API base URL:', API_BASE_URL); // Debug log
 
 const AuthContext = createContext();
 
