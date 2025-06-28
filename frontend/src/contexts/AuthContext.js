@@ -56,15 +56,35 @@ export function AuthProvider({ children }) {
         password
       });
       
-      const { token, userId } = response.data;
+      const { token, user } = response.data;
       setAuthToken(token);
-      setCurrentUser({ id: userId });
+      setCurrentUser(user || { id: user?._id });
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Handle field-specific errors
+      if (error.response?.data?.field) {
+        return {
+          success: false,
+          message: error.response.data.message,
+          field: error.response.data.field
+        };
+      }
+      
+      // Handle validation errors
+      if (error.response?.data?.errors) {
+        return {
+          success: false,
+          message: error.response.data.errors.join(' '),
+          isValidationError: true
+        };
+      }
+      
+      // Handle other errors
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Login failed' 
+        message: error.response?.data?.message || 'Login failed. Please check your credentials and try again.'
       };
     }
   };
@@ -72,13 +92,33 @@ export function AuthProvider({ children }) {
   // Register function
   const register = async (userData) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/register', userData);
+      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
       return { success: true };
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Handle field-specific errors
+      if (error.response?.data?.field) {
+        return {
+          success: false,
+          message: error.response.data.message,
+          field: error.response.data.field
+        };
+      }
+      
+      // Handle validation errors
+      if (error.response?.data?.errors) {
+        return {
+          success: false,
+          message: error.response.data.errors.join(' '),
+          isValidationError: true
+        };
+      }
+      
+      // Handle other errors
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Registration failed' 
+        message: error.response?.data?.message || 'Registration failed. Please try again.'
       };
     }
   };

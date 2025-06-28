@@ -16,8 +16,7 @@ const userSchema = new mongoose.Schema({
     },
     rollNumber: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     collegeName: {
         type: String,
@@ -26,7 +25,8 @@ const userSchema = new mongoose.Schema({
     contactNo: {
         type: String,
         required: true,
-        match: /^[0-9]{10}$/
+        match: /^[0-9]{10}$/,
+        unique: true
     },
     course: {
         type: String,

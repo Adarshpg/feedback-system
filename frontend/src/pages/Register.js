@@ -99,11 +99,13 @@ const validationSchema = Yup.object({
 });
 
 const Register = () => {
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  
   const formik = useFormik({
     initialValues: {
       fullName: '',
@@ -117,8 +119,11 @@ const Register = () => {
       confirmPassword: '',
     },
     validationSchema: validationSchema,
-    onSubmit: async (values) => {
-      setError('');
+    validateOnBlur: true,
+    validateOnChange: false,
+    onSubmit: async (values, { setFieldError }) => {
+      setFormError('');
+      setFieldErrors({});
       setLoading(true);
 
       try {
@@ -127,6 +132,7 @@ const Register = () => {
           ...rest,
           semester: parseInt(rest.semester, 10) || null,
         };
+        
         const result = await register(userData);
         
         if (result.success) {
@@ -134,11 +140,23 @@ const Register = () => {
             state: { message: 'Registration successful! Please log in.' },
           });
         } else {
-          setError(result.message || 'Registration failed');
+          if (result.field) {
+            // Set field-specific error
+            setFieldError(result.field, result.message);
+            setFieldErrors(prev => ({
+              ...prev,
+              [result.field]: result.message
+            }));
+          } else if (result.isValidationError) {
+            // Handle server-side validation errors
+            setFormError(result.message);
+          } else {
+            setFormError(result.message || 'Registration failed');
+          }
         }
       } catch (err) {
-        setError('Failed to create an account. Please try again.');
         console.error('Registration error:', err);
+        setFormError('An unexpected error occurred. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -157,9 +175,9 @@ const Register = () => {
                 Create an Account
               </Typography>
           
-          {error && (
+          {formError && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
+              {formError}
             </Alert>
           )}
           
@@ -189,8 +207,8 @@ const Register = () => {
                   value={formik.values.email}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.email && Boolean(formik.errors.email)}
-                  helperText={formik.touched.email && formik.errors.email}
+                  error={(formik.touched.email && Boolean(formik.errors.email)) || Boolean(fieldErrors.email)}
+                  helperText={(formik.touched.email && formik.errors.email) || fieldErrors.email}
                   margin="normal"
                 />
               </Grid>
@@ -234,12 +252,8 @@ const Register = () => {
                   value={formik.values.contactNo}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.contactNo && Boolean(formik.errors.contactNo)}
-                  helperText={
-                    formik.touched.contactNo && formik.errors.contactNo
-                      ? formik.errors.contactNo
-                      : 'Enter your 10-digit mobile number'
-                  }
+                  error={(formik.touched.contactNo && Boolean(formik.errors.contactNo)) || Boolean(fieldErrors.contactNo)}
+                  helperText={(formik.touched.contactNo && formik.errors.contactNo) || fieldErrors.contactNo}
                   margin="normal"
                 />
               </Grid>

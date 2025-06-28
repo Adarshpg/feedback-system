@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { styled } from '@mui/material/styles';
 import {
   Container,
   Box,
@@ -10,7 +13,7 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  styled,
+  Grid,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -39,43 +42,67 @@ const StyledContainer = styled(Container)({
   alignItems: 'center',
 });
 
+// Validation schema using Yup
+const validationSchema = Yup.object({
+  email: Yup.string()
+    .email('Invalid email address')
+    .required('Email is required'),
+  password: Yup.string()
+    .min(6, 'Password must be at least 6 characters')
+    .required('Password is required'),
+});
+
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the success message from the location state (e.g., after registration)
+  const successMessage = location.state?.message;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+      password: '',
+    },
+    validationSchema,
+    validateOnBlur: true,
+    validateOnChange: false,
+    onSubmit: async (values, { setFieldError }) => {
+      setFormError('');
+      setFieldErrors({});
+      setIsSubmitting(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = await login(formData.email, formData.password);
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.message || 'Failed to log in');
+      try {
+        const result = await login(values.email, values.password);
+        
+        if (result.success) {
+          // Navigate to the dashboard or the intended destination
+          const from = location.state?.from?.pathname || '/dashboard';
+          navigate(from, { replace: true });
+        } else {
+          if (result.field) {
+            // Set field-specific error
+            setFieldError(result.field, result.message);
+            setFieldErrors(prev => ({
+              ...prev,
+              [result.field]: result.message
+            }));
+          } else {
+            setFormError(result.message || 'Failed to log in');
+          }
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        setFormError('An unexpected error occurred. Please try again.');
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (err) {
-      setError('Failed to log in. Please try again.');
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   return (
     <StyledContainer component="main" maxWidth="xs">
@@ -91,13 +118,21 @@ const Login = () => {
             Sign In
           </Typography>
           
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
+          {/* Success message after registration */}
+          {successMessage && (
+            <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
+              {successMessage}
             </Alert>
           )}
           
-          <StyledForm onSubmit={handleSubmit}>
+          {/* Error message */}
+          {formError && (
+            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+              {formError}
+            </Alert>
+          )}
+          
+          <StyledForm onSubmit={formik.handleSubmit}>
             <TextField
               variant="outlined"
               margin="normal"
@@ -108,8 +143,12 @@ const Login = () => {
               name="email"
               autoComplete="email"
               autoFocus
-              value={formData.email}
-              onChange={handleChange}
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={(formik.touched.email && Boolean(formik.errors.email)) || Boolean(fieldErrors.email)}
+              helperText={(formik.touched.email && formik.errors.email) || fieldErrors.email}
+              disabled={isSubmitting}
             />
             <TextField
               variant="outlined"
@@ -121,22 +160,40 @@ const Login = () => {
               type="password"
               id="password"
               autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={(formik.touched.password && Boolean(formik.errors.password)) || Boolean(fieldErrors.password)}
+              helperText={(formik.touched.password && formik.errors.password) || fieldErrors.password}
+              disabled={isSubmitting}
             />
+            <Box textAlign="right" sx={{ mt: 1, mb: 2 }}>
+              <Link
+                component={RouterLink}
+                to="/forgot-password"
+                variant="body2"
+                underline="hover"
+              >
+                Forgot password?
+              </Link>
+            </Box>
             <StyledSubmitButton
               type="submit"
               fullWidth
               variant="contained"
               color="primary"
-              disabled={loading}
+              disabled={isSubmitting}
+              sx={{ mt: 2 }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
+              {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </StyledSubmitButton>
-            <Box textAlign="center">
-              <Link component={RouterLink} to="/register" variant="body2">
-                {"Don't have an account? Sign Up"}
-              </Link>
+            <Box textAlign="center" mt={2}>
+              <Typography variant="body2" color="textSecondary">
+                Don't have an account?{' '}
+                <Link component={RouterLink} to="/register" variant="body2">
+                  Sign Up
+                </Link>
+              </Typography>
             </Box>
           </StyledForm>
         </StyledPaper>

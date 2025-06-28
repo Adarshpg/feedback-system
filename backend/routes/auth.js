@@ -32,9 +32,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: error.details[0].message });
     }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ success: false, message: 'Email already exists' });
+    // Check if email or phone number already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email },
+        { contactNo }
+      ]
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        return res.status(400).json({ success: false, message: 'Email already exists. Please use a different email address.' });
+      }
+      if (existingUser.contactNo === contactNo) {
+        return res.status(400).json({ success: false, message: 'Phone number already exists. Please use a different phone number.' });
+      }
+    }
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
@@ -75,13 +88,37 @@ router.post('/register', async (req, res) => {
     // Handle duplicate key error (E11000)
     if (err.code === 11000) {
       const field = Object.keys(err.keyValue)[0];
-      const message = `An account with this ${field} already exists.`;
+      let message = 'An error occurred during registration.';
+      
+      if (field === 'email') {
+        message = 'This email is already registered. Please use a different email address.';
+      } else if (field === 'contactNo') {
+        message = 'This phone number is already in use. Please use a different phone number.';
+      } else if (field === 'rollNumber') {
+        message = 'This roll number is already registered. Please check your details or contact support.';
+      }
+      
       console.error(`❌ Duplicate key error for ${field}:`, err.keyValue);
-      return res.status(400).json({ success: false, message });
+      return res.status(400).json({ 
+        success: false, 
+        message,
+        field
+      });
+    }
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages
+      });
     }
     
     // Handle other errors
-    return handleError(res, 500, 'Registration failed', err);
+    console.error('Registration error:', err);
+    return handleError(res, 500, 'Registration failed. Please try again later.', err);
   }
 });
 
