@@ -72,7 +72,7 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { label: 'Dashboard', path: '/' },
+    { label: 'Dashboard', path: '/dashboard' },
     { label: 'Feedback', path: '/feedback/1' },
   ];
 
@@ -87,7 +87,7 @@ const Navbar = () => {
         <StyledToolbar disableGutters>
           <Box 
             component={RouterLink} 
-            to="/" 
+            to={isAuthenticated ? "/dashboard" : "/"} 
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 

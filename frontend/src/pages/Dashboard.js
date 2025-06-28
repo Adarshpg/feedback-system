@@ -66,7 +66,7 @@ const Dashboard = () => {
     const fetchUserFeedbacks = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
+        if (!token || !currentUser) {
           navigate('/login');
           return;
         }
