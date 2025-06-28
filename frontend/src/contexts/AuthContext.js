@@ -48,10 +48,13 @@ export function AuthProvider({ children }) {
     verifyToken();
   }, []);
 
+  // Get API base URL from environment variables
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback.medinitechnologies.in/';
+
   // Login function
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         email,
         password
       });
@@ -92,7 +95,7 @@ export function AuthProvider({ children }) {
   // Register function
   const register = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, userData);
       return { success: true };
     } catch (error) {
       console.error('Registration error:', error);
