@@ -140,40 +140,28 @@ mongoose.connection.on('connected', () => {
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error(`❌ Mongoose connection error: ${err.message}`);
+  console.error('❌ MongoDB connection error:', err);
+  process.exit(1);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('ℹ️  Mongoose disconnected from MongoDB');
+  console.log('❌ MongoDB disconnected');
 });
 
-// Initial connection
-connectDB();
-
-// Test route
-app.get('/api/test', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'API is working!',
-    timestamp: new Date().toISOString()
-  });
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('👋 SIGINT received. Shutting down gracefully...');
+  await mongoose.connection.close();
+  console.log('✅ MongoDB connection closed');
+  process.exit(0);
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/feedback', feedbackRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  const status = dbStatus === 'connected' ? 'healthy' : 'unhealthy';
-  
-  res.status(200).json({
-    status,
-    timestamp: new Date().toISOString(),
-    database: dbStatus,
-    uptime: process.uptime(),
-    memoryUsage: process.memoryUsage(),
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Error:', err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: 'Something went wrong!'
   });
 });
 
@@ -185,11 +173,31 @@ app.use('/api/*', (req, res) => {
   });
 });
 
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ status: 'success', message: 'Server is running' });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    database: dbStatus
+  });
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const staticPath = path.join(__dirname, '../frontend/build');
   app.use(express.static(staticPath));
   
+  // Handle React router in a more efficient way
   app.get('*', (req, res) => {
     res.sendFile(path.join(staticPath, 'index.html'), (err) => {
       if (err) {
@@ -200,27 +208,10 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('🔥 Error:', err.stack);
-  
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-  
-  res.status(statusCode).json({
-    status: 'error',
-    message,
-    ...(process.env.NODE_ENV === 'development' && { 
-      stack: err.stack,
-      error: err 
-    })
-  });
-});
-
 // Start server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 Server running on port ${PORT}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 Server URL: http://localhost:${PORT}`);
 });
