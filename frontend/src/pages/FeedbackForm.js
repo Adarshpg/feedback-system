@@ -167,7 +167,7 @@ const scaleOptions = [
   { value: '1', label: 'Poor' },
 ];
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback-system-1-jqqj.onrender.com/api';
 
 const FeedbackForm = () => {
   const { phase } = useParams();
