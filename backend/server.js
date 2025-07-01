@@ -39,10 +39,11 @@ const corsOptions = {
     'http://localhost:5000'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-auth-token'],
   credentials: true,
   optionsSuccessStatus: 200,
-  maxAge: 600
+  maxAge: 600,
+  exposedHeaders: ['x-auth-token']
 };
 
 // Security middleware
