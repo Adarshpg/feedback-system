@@ -90,6 +90,10 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
 // Log environment info
 console.log('🚀 Starting server...');
 console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
