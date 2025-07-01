@@ -17,50 +17,69 @@ import {
   FormControlLabel,
   Radio,
   TextField,
-  Divider,
   Alert,
   IconButton,
+  Snackbar,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
-// Styled components using the new MUI v5 approach
+// Styled components
 const PREFIX = 'FeedbackForm';
 const classes = {
   paper: `${PREFIX}-paper`,
   stepper: `${PREFIX}-stepper`,
   buttons: `${PREFIX}-buttons`,
   question: `${PREFIX}-question`,
-  sectionTitle: `${PREFIX}-sectionTitle`,
+  successIcon: `${PREFIX}-successIcon`,
+  dialogContent: `${PREFIX}-dialogContent`,
 };
 
 const Root = styled('div')(({ theme }) => ({
   [`& .${classes.paper}`]: {
     padding: theme.spacing(4),
     marginTop: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius * 2,
+    boxShadow: theme.shadows[3],
   },
   [`& .${classes.stepper}`]: {
     padding: theme.spacing(3, 0, 5),
+    '& .MuiStepIcon-root.Mui-completed': {
+      color: theme.palette.success.main,
+    },
+    '& .MuiStepIcon-root.Mui-active': {
+      color: theme.palette.primary.main,
+    },
   },
   [`& .${classes.buttons}`]: {
     display: 'flex',
-    justifyContent: 'flex-end',
-    marginTop: theme.spacing(3),
+    justifyContent: 'space-between',
+    marginTop: theme.spacing(4),
     '& > *': {
       marginLeft: theme.spacing(1),
     },
   },
   [`& .${classes.question}`]: {
-    marginBottom: theme.spacing(3),
-    padding: theme.spacing(2),
+    marginBottom: theme.spacing(4),
+    padding: theme.spacing(3),
     borderLeft: `4px solid ${theme.palette.primary.main}`,
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
   },
-  [`& .${classes.sectionTitle}`]: {
-    margin: theme.spacing(3, 0, 2),
-    paddingBottom: theme.spacing(1),
-    borderBottom: `1px solid ${theme.palette.divider}`,
+  [`& .${classes.successIcon}`]: {
+    fontSize: 60,
+    color: theme.palette.success.main,
+    marginBottom: theme.spacing(2),
+  },
+  [`& .${classes.dialogContent}`]: {
+    textAlign: 'center',
+    padding: theme.spacing(4),
   },
 }));
 
@@ -148,32 +167,38 @@ const scaleOptions = [
   { value: '1', label: 'Poor' },
 ];
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const FeedbackForm = () => {
   const { phase } = useParams();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [success, setSuccess] = useState(false);
   const [answers, setAnswers] = useState({});
   const [formErrors, setFormErrors] = useState({});
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const questions = questionsBySemester[phase] || [];
   const totalSteps = questions.length;
 
   useEffect(() => {
-    // In a real app, you might want to check if the user has already submitted feedback for this semester
-    // and load their previous answers if they want to edit
-    
-    // Reset form when semester changes
-    setAnswers({});
-    setFormErrors({});
-    setActiveStep(0);
-  }, [phase]);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login', { state: { from: window.location.pathname } });
+        return;
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [navigate, phase]);
 
   const handleNext = () => {
-    // Validate current step before proceeding
     const currentQuestion = questions[activeStep];
     if (currentQuestion.required && !answers[currentQuestion.id]) {
       setFormErrors(prev => ({
@@ -198,7 +223,6 @@ const FeedbackForm = () => {
       [questionId]: value,
     }));
     
-    // Clear error when user provides an answer
     if (formErrors[questionId]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -208,12 +232,7 @@ const FeedbackForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitLoading(true);
-    setError('');
-    
-    // Check if all required questions are answered
+  const validateForm = () => {
     const requiredQuestions = questions.filter(q => q.required);
     const missingAnswers = requiredQuestions.filter(q => !answers[q.id]);
     
@@ -223,44 +242,81 @@ const FeedbackForm = () => {
         newErrors[q.id] = 'This is a required question';
       });
       setFormErrors(newErrors);
-      setSubmitLoading(false);
+      setActiveStep(questions.findIndex(q => missingAnswers.some(mq => mq.id === q.id)));
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
+    
+    setShowConfirmDialog(true);
+  };
+
+  const confirmSubmit = async () => {
+    setShowConfirmDialog(false);
+    setSubmitLoading(true);
+    setError('');
     
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        navigate('/login');
+        navigate('/login', { state: { from: window.location.pathname } });
         return;
       }
       
       const response = await axios.post(
-        'http://localhost:5000/api/feedback/submit',
+        `${API_BASE_URL}/feedback/submit`,
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             question: questions.find(q => q.id === questionId)?.question || questionId,
-            answer
+            answer: answer.toString()
           }))
         },
         {
           headers: {
             'x-auth-token': token,
             'Content-Type': 'application/json'
-          }
+          },
+          withCredentials: true
         }
       );
       
-      setSuccess('Thank you for your feedback!');
+      setSuccess(true);
+      setShowSuccessDialog(true);
       
-      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
         navigate('/dashboard');
-      }, 2000);
+      }, 3000);
       
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      setError(err.response?.data?.message || 'Failed to submit feedback. Please try again.');
+      
+      let errorMessage = 'Failed to submit feedback. Please try again.';
+      
+      if (err.response) {
+        // Server responded with an error
+        errorMessage = err.response.data?.message || 
+                      err.response.data?.error || 
+                      errorMessage;
+                      
+        if (err.response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login', { state: { from: window.location.pathname } });
+          return;
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your internet connection.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitLoading(false);
     }
@@ -273,9 +329,12 @@ const FeedbackForm = () => {
       case 'scale':
         return (
           <FormControl component="fieldset" error={!!error} fullWidth>
-            <FormLabel component="legend">{question.question} {question.required && '*'}</FormLabel>
+            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+              {question.question} {question.required && '*'}
+            </FormLabel>
             <RadioGroup
               row
+              sx={{ gap: 2 }}
               aria-label={question.id}
               name={question.id}
               value={answers[question.id] || ''}
@@ -285,13 +344,26 @@ const FeedbackForm = () => {
                 <FormControlLabel
                   key={option.value}
                   value={option.value}
-                  control={<Radio color="primary" />}
-                  label={`${option.value} - ${option.label}`}
+                  control={<Radio />}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span>{option.value}</span>
+                      <span style={{ fontSize: '0.75rem' }}>{option.label}</span>
+                    </Box>
+                  }
                   labelPlacement="bottom"
+                  sx={{ 
+                    m: 0,
+                    '& .MuiFormControlLabel-label': { mt: 1 }
+                  }}
                 />
               ))}
             </RadioGroup>
-            {error && <Typography color="error" variant="caption">{error}</Typography>}
+            {error && (
+              <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
+                {error}
+              </Typography>
+            )}
           </FormControl>
         );
         
@@ -309,6 +381,13 @@ const FeedbackForm = () => {
               onChange={(e) => handleAnswerChange(question.id, e.target.value)}
               error={!!error}
               helperText={error}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                },
+              }}
             />
           </FormControl>
         );
@@ -320,7 +399,7 @@ const FeedbackForm = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
       </Box>
     );
@@ -328,84 +407,130 @@ const FeedbackForm = () => {
 
   return (
     <Root>
-      <Container maxWidth="md">
-      <Box display="flex" alignItems="center" mb={3}>
-        <IconButton onClick={() => navigate('/')} style={{ marginRight: '8px' }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4" component="h1">
-          Phase {phase} Feedback - {phase === '1' ? '20%' : phase === '2' ? '50%' : '100%'} Completion
-        </Typography>
-      </Box>
-      
-      <Stepper activeStep={activeStep} className={classes.stepper}>
-        {questions.map((question, index) => (
-          <Step key={index}>
-            <StepLabel>Question {index + 1}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      
-      <Paper className={classes.paper} elevation={3}>
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <Box mb={3}>
-              <Alert severity="error">{error}</Alert>
-            </Box>
-          )}
-          
-          {success ? (
-            <Box textAlign="center" py={4}>
-              <Typography variant="h5" color="primary" gutterBottom>
-                {success}
-              </Typography>
-              <Typography color="textSecondary">
-                Redirecting to dashboard...
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              <div className={classes.question}>
-                {renderQuestion(questions[activeStep])}
-              </div>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box display="flex" alignItems="center" mb={4}>
+          <IconButton 
+            onClick={() => window.history.back()} 
+            sx={{ mr: 2, color: 'primary.main' }}
+            aria-label="go back"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            Phase {phase} Feedback - {phase === '1' ? '20%' : phase === '2' ? '50%' : '100%'} Completion
+          </Typography>
+        </Box>
+        
+        <Stepper activeStep={activeStep} alternativeLabel className={classes.stepper}>
+          {questions.map((_, index) => (
+            <Step key={index} completed={activeStep > index}>
+              <StepLabel>Question {index + 1}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        
+        <Paper className={classes.paper} elevation={0}>
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ mb: 3 }}
+                onClose={() => setError('')}
+              >
+                {error}
+              </Alert>
+            )}
+            
+            <div className={classes.question}>
+              {questions[activeStep] && renderQuestion(questions[activeStep])}
+            </div>
+            
+            <div className={classes.buttons}>
+              <Button
+                variant="outlined"
+                disabled={activeStep === 0 || submitLoading}
+                onClick={handleBack}
+                sx={{ minWidth: 100 }}
+              >
+                Back
+              </Button>
               
-              <div className={classes.buttons}>
+              {activeStep !== totalSteps - 1 ? (
                 <Button
-                  disabled={activeStep === 0}
-                  onClick={handleBack}
-                  style={{ marginRight: 'auto' }}
+                  variant="contained"
+                  color="primary"
+                  onClick={handleNext}
+                  sx={{ minWidth: 100 }}
                 >
-                  Back
+                  Next
                 </Button>
-                
-                {activeStep !== totalSteps - 1 ? (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleNext}
-                  >
-                    Next
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    disabled={submitLoading}
-                  >
-                    {submitLoading ? (
-                      <CircularProgress size={24} color="inherit" />
-                    ) : (
-                      'Submit Feedback'
-                    )}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </form>
-      </Paper>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={submitLoading}
+                  sx={{ minWidth: 150 }}
+                  endIcon={submitLoading ? <CircularProgress size={20} color="inherit" /> : null}
+                >
+                  {submitLoading ? 'Submitting...' : 'Submit Feedback'}
+                </Button>
+              )}
+            </div>
+          </form>
+        </Paper>
       </Container>
+
+      {/* Success Dialog */}
+      <Dialog
+        open={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        aria-labelledby="success-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box className={classes.dialogContent}>
+          <CheckCircleOutlineIcon className={classes.successIcon} />
+          <Typography variant="h5" gutterBottom>
+            Thank You!
+          </Typography>
+          <Typography variant="body1" color="textSecondary" paragraph>
+            Your feedback has been submitted successfully.
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Redirecting to dashboard...
+          </Typography>
+        </Box>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        aria-labelledby="confirm-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Submit Feedback</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to submit your feedback? You won't be able to edit it after submission.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirmDialog(false)} color="primary">
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmSubmit} 
+            color="primary" 
+            variant="contained"
+            autoFocus
+          >
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Root>
   );
 };
