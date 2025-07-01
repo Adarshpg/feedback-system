@@ -1,4 +1,5 @@
-require('dotenv').config({ path: '.env' });
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -31,35 +32,22 @@ requiredEnvVars.forEach(env => {
 });
 
 // Enable CORS
-const allowedOrigins = [
-  'https://feedback.medinitechnologies.in',
-  'https://feedback-system-1-jqqj.onrender.com',
-  'http://localhost:3000',
-  'http://localhost:5000'
-];
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like curl or mobile apps)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'), false);
-    }
-  },
+  origin: [
+    'https://feedback.medinitechnologies.in', // Render backend URL
+    'http://localhost:3000',
+    'http://localhost:5000'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-auth-token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
   optionsSuccessStatus: 200,
-  maxAge: 600,
-  exposedHeaders: ['x-auth-token']
+  maxAge: 600
 };
 
 // Security middleware
 app.use(helmet());
 app.use(cors(corsOptions));
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -90,15 +78,17 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/feedback', feedbackRoutes);
-
 // Log environment info
 console.log('🚀 Starting server...');
 console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔗 MongoDB URI: ${process.env.MONGODB_URI ? '✅ Set' : '❌ NOT SET'}`);
-console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SET'}`);
+console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set (' + process.env.JWT_SECRET.substring(0, 4) + '...)' : '❌ NOT SET'}`);
+console.log('Current directory:', __dirname);
+console.log('Environment variables:', {
+  NODE_ENV: process.env.NODE_ENV,
+  JWT_SECRET: process.env.JWT_SECRET ? '***' + process.env.JWT_SECRET.substring(process.env.JWT_SECRET.length - 4) : 'Not set',
+  MONGODB_URI: process.env.MONGODB_URI ? '***' + process.env.MONGODB_URI.substring(process.env.MONGODB_URI.length - 15) : 'Not set'
+});
 
 // Database connection with enhanced error handling
 const connectDB = async (retryCount = 0) => {
@@ -140,28 +130,81 @@ mongoose.connection.on('connected', () => {
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB connection error:', err);
-  process.exit(1);
+  console.error(`❌ Mongoose connection error: ${err.message}`);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('❌ MongoDB disconnected');
+  console.log('ℹ️  Mongoose disconnected from MongoDB');
 });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('👋 SIGINT received. Shutting down gracefully...');
-  await mongoose.connection.close();
-  console.log('✅ MongoDB connection closed');
-  process.exit(0);
+// Initial connection
+connectDB();
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'API is working!',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.stack);
-  res.status(500).json({
-    status: 'error',
-    message: 'Something went wrong!'
+// Test JWT verification
+app.get('/api/test-auth', (req, res) => {
+  const authHeader = req.header('Authorization');
+  let token = '';
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else {
+    token = req.header('auth-token');
+  }
+  
+  if (!token) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'No token provided',
+      headers: req.headers
+    });
+  }
+
+  try {
+    const jwt = require('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const decoded = jwt.verify(token, secret);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Token is valid',
+      decoded,
+      secret: '***' + secret.substring(secret.length - 4)
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'error',
+      message: 'Invalid token',
+      error: err.message,
+      token: '***' + token.substring(token.length - 8),
+      secret: process.env.JWT_SECRET ? '***' + process.env.JWT_SECRET.substring(process.env.JWT_SECRET.length - 4) : 'Not set'
+    });
+  }
+});
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const status = dbStatus === 'connected' ? 'healthy' : 'unhealthy';
+  
+  res.status(200).json({
+    status,
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
   });
 });
 
@@ -173,31 +216,11 @@ app.use('/api/*', (req, res) => {
   });
 });
 
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/feedback', feedbackRoutes);
-
-// Test route
-app.get('/api/test', (req, res) => {
-  res.json({ status: 'success', message: 'Server is running' });
-});
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    database: dbStatus
-  });
-});
-
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const staticPath = path.join(__dirname, '../frontend/build');
   app.use(express.static(staticPath));
   
-  // Handle React router in a more efficient way
   app.get('*', (req, res) => {
     res.sendFile(path.join(staticPath, 'index.html'), (err) => {
       if (err) {
@@ -208,10 +231,27 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('🔥 Error:', err.stack);
+  
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  
+  res.status(statusCode).json({
+    status: 'error',
+    message,
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      error: err 
+    })
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 Server URL: http://localhost:${PORT}`);
 });

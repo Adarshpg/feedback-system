@@ -167,7 +167,7 @@ const scaleOptions = [
   { value: '1', label: 'Poor' },
 ];
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://feedback-system-1-jqqj.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const FeedbackForm = () => {
   const { phase } = useParams();
@@ -269,9 +269,9 @@ const FeedbackForm = () => {
         navigate('/login', { state: { from: window.location.pathname } });
         return;
       }
-      
+
       const response = await axios.post(
-        `${API_BASE_URL}/feedback/submit`,
+        '/feedback/submit',
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -281,7 +281,6 @@ const FeedbackForm = () => {
         },
         {
           headers: {
-            'x-auth-token': token,
             'Content-Type': 'application/json'
           },
           withCredentials: true
@@ -292,11 +291,22 @@ const FeedbackForm = () => {
       setShowSuccessDialog(true);
       
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/register');
       }, 3000);
       
     } catch (err) {
-      console.error('Error submitting feedback:', err);
+      console.error('Error submitting feedback:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers,
+        request: err.request,
+        config: {
+          url: err.config?.url,
+          method: err.config?.method,
+          headers: err.config?.headers
+        }
+      });
       
       let errorMessage = 'Failed to submit feedback. Please try again.';
       
