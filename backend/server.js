@@ -31,13 +31,22 @@ requiredEnvVars.forEach(env => {
 });
 
 // Enable CORS
+const allowedOrigins = [
+  'https://feedback.medinitechnologies.in',
+  'https://feedback-system-1-jqqj.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
 const corsOptions = {
-  origin: [
-    'https://feedback.medinitechnologies.in',
-    'https://feedback-system-1-jqqj.onrender.com', // Render backend URL
-    'http://localhost:3000',
-    'http://localhost:5000'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like curl or mobile apps)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-auth-token'],
   credentials: true,
@@ -49,6 +58,8 @@ const corsOptions = {
 // Security middleware
 app.use(helmet());
 app.use(cors(corsOptions));
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
