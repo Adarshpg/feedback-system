@@ -1,5 +1,4 @@
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config({ path: '.env' });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -82,13 +81,7 @@ app.use('/api', limiter);
 console.log('🚀 Starting server...');
 console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔗 MongoDB URI: ${process.env.MONGODB_URI ? '✅ Set' : '❌ NOT SET'}`);
-console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set (' + process.env.JWT_SECRET.substring(0, 4) + '...)' : '❌ NOT SET'}`);
-console.log('Current directory:', __dirname);
-console.log('Environment variables:', {
-  NODE_ENV: process.env.NODE_ENV,
-  JWT_SECRET: process.env.JWT_SECRET ? '***' + process.env.JWT_SECRET.substring(process.env.JWT_SECRET.length - 4) : 'Not set',
-  MONGODB_URI: process.env.MONGODB_URI ? '***' + process.env.MONGODB_URI.substring(process.env.MONGODB_URI.length - 15) : 'Not set'
-});
+console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SET'}`);
 
 // Database connection with enhanced error handling
 const connectDB = async (retryCount = 0) => {
@@ -147,47 +140,6 @@ app.get('/api/test', (req, res) => {
     message: 'API is working!',
     timestamp: new Date().toISOString()
   });
-});
-
-// Test JWT verification
-app.get('/api/test-auth', (req, res) => {
-  const authHeader = req.header('Authorization');
-  let token = '';
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  } else {
-    token = req.header('auth-token');
-  }
-  
-  if (!token) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'No token provided',
-      headers: req.headers
-    });
-  }
-
-  try {
-    const jwt = require('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
-    const decoded = jwt.verify(token, secret);
-    
-    res.status(200).json({
-      status: 'success',
-      message: 'Token is valid',
-      decoded,
-      secret: '***' + secret.substring(secret.length - 4)
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'error',
-      message: 'Invalid token',
-      error: err.message,
-      token: '***' + token.substring(token.length - 8),
-      secret: process.env.JWT_SECRET ? '***' + process.env.JWT_SECRET.substring(process.env.JWT_SECRET.length - 4) : 'Not set'
-    });
-  }
 });
 
 // API routes

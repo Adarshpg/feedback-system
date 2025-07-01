@@ -269,9 +269,9 @@ const FeedbackForm = () => {
         navigate('/login', { state: { from: window.location.pathname } });
         return;
       }
-
+      
       const response = await axios.post(
-        '/feedback/submit',
+        `${API_BASE_URL}/feedback/submit`,
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -281,6 +281,7 @@ const FeedbackForm = () => {
         },
         {
           headers: {
+            'x-auth-token': token,
             'Content-Type': 'application/json'
           },
           withCredentials: true
@@ -295,18 +296,7 @@ const FeedbackForm = () => {
       }, 3000);
       
     } catch (err) {
-      console.error('Error submitting feedback:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        headers: err.response?.headers,
-        request: err.request,
-        config: {
-          url: err.config?.url,
-          method: err.config?.method,
-          headers: err.config?.headers
-        }
-      });
+      console.error('Error submitting feedback:', err);
       
       let errorMessage = 'Failed to submit feedback. Please try again.';
       
