@@ -330,30 +330,19 @@ const FeedbackForm = () => {
               {question.question} {question.required && '*'}
             </FormLabel>
             <RadioGroup
-              row
-              sx={{ gap: 2 }}
               aria-label={question.id}
               name={question.id}
               value={answers[question.id] || ''}
               onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              sx={{ gap: 1 }}
             >
               {scaleOptions.map((option) => (
-                <FormControlLabel
-                  key={option.value}
-                  value={option.value}
-                  control={<Radio />}
-                  label={
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span>{option.value}</span>
-                      <span style={{ fontSize: '0.75rem' }}>{option.label}</span>
-                    </Box>
-                  }
-                  labelPlacement="bottom"
-                  sx={{ 
-                    m: 0,
-                    '& .MuiFormControlLabel-label': { mt: 1 }
-                  }}
-                />
+                <Box key={option.value} sx={{ display: 'flex', alignItems: 'center', py: 0.5 }}>
+                  <Radio value={option.value} />
+                  <Box sx={{ ml: 1, display: 'flex', flexDirection: 'column' }}>
+                    <span>{option.value} - {option.label}</span>
+                  </Box>
+                </Box>
               ))}
             </RadioGroup>
             {error && (
@@ -370,8 +359,6 @@ const FeedbackForm = () => {
             <TextField
               id={question.id}
               label={`${question.question} ${question.required ? '*' : ''}`}
-              multiline
-              rows={4}
               variant="outlined"
               fullWidth
               value={answers[question.id] || ''}
