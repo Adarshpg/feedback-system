@@ -1,17 +1,32 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
+// Clear any existing token to force fresh login
+localStorage.removeItem('token');
+
 // Set base URL for API requests
 const API_BASE_URL = 'http://localhost:5000/api';
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
+axios.defaults.withCredentials = true;
 console.log('Using API base URL:', API_BASE_URL);
 
-// Optional: request interceptor (if needed)
+// Request interceptor to add auth token to requests
 axios.interceptors.request.use(config => {
-  config.url = config.url.replace(/^\/+/, ''); // Remove leading slashes
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers['x-auth-token'] = token;
+  }
+  // Ensure we don't have double slashes in the URL
+  config.url = config.url.replace(/^\/+/, '');
+  // Ensure Content-Type is set for non-GET requests
+  if (config.data && !config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   return config;
+}, error => {
+  return Promise.reject(error);
 });
 
 const AuthContext = createContext();
@@ -28,10 +43,10 @@ export function AuthProvider({ children }) {
   // Set auth token for axios
   const setAuthToken = (token) => {
     if (token) {
-      axios.defaults.headers.common['auth-token'] = token;
+      axios.defaults.headers.common['x-auth-token'] = token;
       localStorage.setItem('token', token);
     } else {
-      delete axios.defaults.headers.common['auth-token'];
+      delete axios.defaults.headers.common['x-auth-token'];
       localStorage.removeItem('token');
     }
     setToken(token);

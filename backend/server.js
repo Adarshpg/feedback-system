@@ -1,7 +1,6 @@
 require('dotenv').config({ path: '.env' });
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
@@ -30,23 +29,32 @@ requiredEnvVars.forEach(env => {
   }
 });
 
-// Enable CORS
+// CORS configuration
 const corsOptions = {
-  origin: [
-    'https://feedback.medinitechnologies.in', // Render backend URL
-    'http://localhost:3000',
-    'http://localhost:5000'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200,
-  maxAge: 600
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'https://feedback.medinitechnologies.in'
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'auth-token'],
+  exposedHeaders: ['x-auth-token'],
+  credentials: true
 };
+
+// Apply CORS with the above configuration
+app.use(require('cors')(corsOptions));
 
 // Security middleware
 app.use(helmet());
-app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -140,6 +148,13 @@ app.get('/api/test', (req, res) => {
     message: 'API is working!',
     timestamp: new Date().toISOString()
   });
+});
+
+// Handle OPTIONS requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, x-auth-token, Authorization');
+  res.status(200).end();
 });
 
 // API routes

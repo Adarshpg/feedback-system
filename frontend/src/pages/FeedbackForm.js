@@ -264,32 +264,29 @@ const FeedbackForm = () => {
     setError('');
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login', { state: { from: window.location.pathname } });
-        return;
-      }
+      console.log('Submitting feedback with data:', {
+        semester: parseInt(phase),
+        answers: Object.entries(answers).map(([questionId, answer]) => ({
+          question: questions.find(q => q.id === questionId)?.question || questionId,
+          answer: answer.toString()
+        }))
+      });
       
       const response = await axios.post(
-        `${API_BASE_URL}/feedback/submit`,
+        '/feedback/submit',
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             question: questions.find(q => q.id === questionId)?.question || questionId,
             answer: answer.toString()
           }))
-        },
-        {
-          headers: {
-            'x-auth-token': token,
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
         }
       );
       
+      console.log('Feedback submission successful:', response.data);
       setSuccess(true);
       setShowSuccessDialog(true);
+      setSubmitLoading(false);
       
       setTimeout(() => {
         navigate('/register');

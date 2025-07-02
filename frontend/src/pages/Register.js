@@ -51,18 +51,29 @@ const ContentSection = styled(Box)(({ theme }) => ({
   justifyContent: 'center',
   height: '100%',
   padding: theme.spacing(4),
-  backgroundColor: theme.palette.primary.main,
-  color: 'white',
+  backgroundColor: '#ffffff',
+  color: theme.palette.text.primary,
   borderRadius: theme.shape.borderRadius,
-  '& h2, & h3, & p': {
-    color: 'white',
+  boxShadow: theme.shadows[3],
+  '& h2, & h3, & p, & li': {
+    color: theme.palette.text.primary,
   },
   '& ul': {
     paddingLeft: theme.spacing(2),
+    margin: 0,
+    '& li': {
+      color: theme.palette.text.secondary,
+      marginBottom: theme.spacing(1.5),
+    }
   },
-  '& li': {
-    marginBottom: theme.spacing(1),
-  },
+  '& .MuiButton-outlined': {
+    borderColor: theme.palette.primary.main,
+    color: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+      borderColor: theme.palette.primary.dark,
+    }
+  }
 }));
 
 const FormSection = styled(Box)({
@@ -379,16 +390,6 @@ const Register = () => {
               <li>Track your feedback history</li>
               <li>Contribute to better education for everyone</li>
             </ul>
-
-            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
-              How It Works
-            </Typography>
-            <ol>
-              <li>Create your account</li>
-              <li>Complete your profile</li>
-              <li>Submit feedback at key course milestones</li>
-              <li>Help us improve education quality</li>
-            </ol>
 
             <Box mt={4}>
               <Typography variant="body2" fontStyle="italic">

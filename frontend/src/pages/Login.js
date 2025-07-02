@@ -57,19 +57,29 @@ const ContentSection = styled(Box)(({ theme }) => ({
   justifyContent: 'center',
   height: '100%',
   padding: theme.spacing(4),
-  backgroundColor: theme.palette.primary.main,
-  color: 'white',
+  backgroundColor: '#ffffff',
+  color: theme.palette.text.primary,
   borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[3],
   '& h2, & h3, & p, & li': {
-    color: 'white',
+    color: theme.palette.text.primary,
   },
   '& ul': {
     paddingLeft: theme.spacing(2),
     margin: 0,
+    '& li': {
+      color: theme.palette.text.secondary,
+      marginBottom: theme.spacing(1.5),
+    }
   },
-  '& li': {
-    marginBottom: theme.spacing(1.5),
-  },
+  '& .MuiButton-outlined': {
+    borderColor: theme.palette.primary.main,
+    color: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+      borderColor: theme.palette.primary.dark,
+    }
+  }
 }));
 
 const FormSection = styled(Box)({
@@ -250,44 +260,27 @@ const Login = () => {
         
         <Grid item xs={12} md={6}>
           <ContentSection>
-            <Typography variant="h4" component="h2" gutterBottom>
-              Why Sign In?
+            <Typography variant="h4" gutterBottom>
+              Welcome to Our Feedback System
             </Typography>
             <Typography variant="body1" paragraph>
               Access your personalized dashboard to track your feedback submissions and view your progress.
             </Typography>
             
+            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+              Benefits of Your Account
+            </Typography>
+            <ul>
+              <li>Track your feedback submission history</li>
+              <li>View your progress and completion status</li>
+              <li>Access personalized recommendations</li>
+              <li>Get notified about important updates</li>
+            </ul>
+
             <Box mt={4}>
-              <Typography variant="h6" gutterBottom>Benefits of your account:</Typography>
-              <ul>
-                <li>Track your feedback submission history</li>
-                <li>View your progress and completion status</li>
-                <li>Access personalized recommendations</li>
-                <li>Get notified about important updates</li>
-                <li>Manage your account settings</li>
-              </ul>
-            </Box>
-            
-            <Box mt={4}>
-              <Typography variant="h6" gutterBottom>Need help?</Typography>
-              <Typography variant="body2" paragraph>
-                If you're having trouble signing in, please contact our support team for assistance.
+              <Typography variant="body2" fontStyle="italic">
+                Your feedback helps us create a better learning environment for everyone.
               </Typography>
-              <Button 
-                variant="outlined" 
-                color="inherit"
-                sx={{ 
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  color: 'white',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  mt: 1,
-                }}
-              >
-                Contact Support
-              </Button>
             </Box>
           </ContentSection>
         </Grid>
