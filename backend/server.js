@@ -33,7 +33,7 @@ requiredEnvVars.forEach(env => {
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      'http://localhost:3000',
+      'http://localhost:3001',
       'http://localhost:5000',
       'https://feedback.medinitechnologies.in','https://feedback-system-oyx4.vercel.app'
     ];

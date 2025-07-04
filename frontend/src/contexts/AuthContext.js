@@ -5,7 +5,7 @@ import axios from 'axios';
 localStorage.removeItem('token');
 
 // Set base URL for API requests
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://feedback-system-1-jqqj.onrender.com/api';
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
