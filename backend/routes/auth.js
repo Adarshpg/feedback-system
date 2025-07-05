@@ -1,8 +1,19 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const otpGenerator = require('otp-generator');
+const twilio = require('twilio');
 const User = require('../models/User');
 const { registerValidation, loginValidation } = require('../validation');
+
+// Initialize Twilio client
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+const twilioClient = twilio(accountSid, authToken);
+
+// In-memory store for OTPs (in production, use Redis or similar)
+const otpStore = new Map();
 
 const router = express.Router();
 
@@ -157,6 +168,147 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     return handleError(res, 500, 'Login failed', err);
+  }
+});
+
+// Generate and send OTP for password reset
+router.post('/request-password-reset', async (req, res) => {
+  try {
+    const { contactNo } = req.body;
+
+    // Validate phone number
+    if (!contactNo || !/^\d{10}$/.test(contactNo)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a valid 10-digit phone number' 
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ contactNo });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No account found with this phone number' 
+      });
+    }
+
+    // Generate OTP (6 digits, numbers only)
+    const otp = otpGenerator.generate(6, { 
+      digits: true,
+      lowerCaseAlphabets: false, 
+      upperCaseAlphabets: false, 
+      specialChars: false 
+    });
+
+    // Store OTP with expiration (5 minutes)
+    otpStore.set(contactNo, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+    });
+
+    // In production, uncomment this to send OTP via SMS
+    /*
+    try {
+      await twilioClient.messages.create({
+        body: `Your OTP for password reset is: ${otp}. Valid for 5 minutes.`,
+        from: twilioPhoneNumber,
+        to: `+91${contactNo}` // Assuming Indian numbers, adjust as needed
+      });
+    } catch (twilioError) {
+      console.error('Twilio error:', twilioError);
+      return handleError(res, 500, 'Failed to send OTP. Please try again later.');
+    }
+    */
+
+    // For development, return OTP in response
+    console.log(`OTP for ${contactNo}: ${otp}`);
+
+    res.json({ 
+      success: true, 
+      message: 'OTP sent successfully',
+      // Remove in production
+      otp
+    });
+
+  } catch (err) {
+    return handleError(res, 500, 'Failed to process request', err);
+  }
+});
+
+// Verify OTP and reset password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { contactNo, otp, newPassword } = req.body;
+
+    // Validate input
+    if (!contactNo || !otp || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone number, OTP, and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Check if OTP exists and is valid
+    const otpData = otpStore.get(contactNo);
+    if (!otpData) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'OTP not found or expired. Please request a new OTP.' 
+      });
+    }
+
+    // Check if OTP is expired
+    if (otpData.expiresAt < Date.now()) {
+      otpStore.delete(contactNo);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'OTP has expired. Please request a new OTP.' 
+      });
+    }
+
+    // Verify OTP
+    if (otpData.otp !== otp) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid OTP. Please try again.' 
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ contactNo });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    // Clear OTP after successful password reset
+    otpStore.delete(contactNo);
+
+    res.json({ 
+      success: true, 
+      message: 'Password reset successful. You can now login with your new password.' 
+    });
+
+  } catch (err) {
+    return handleError(res, 500, 'Failed to reset password', err);
   }
 });
 
