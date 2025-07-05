@@ -86,21 +86,10 @@ const PhaseTitle = styled(Typography)(({ theme }) => ({
 const ProgressContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
   margin: theme.spacing(3, 0),
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 6,
-    padding: 2,
-    background: 'linear-gradient(90deg, #f5f7fa, #c3cfe2)',
-    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-    WebkitMaskComposite: 'xor',
-    maskComposite: 'exclude',
-    pointerEvents: 'none',
-  },
+  '& > *': {
+    position: 'relative',
+    zIndex: 1
+  }
 }));
 
 const MilestoneDot = styled('div')(({ theme, active }) => ({
@@ -135,6 +124,9 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const [progress, setProgress] = useState(0);
+  const [nextFeedback, setNextFeedback] = useState(1);
+
   useEffect(() => {
     const fetchUserFeedbacks = async () => {
       try {
@@ -160,6 +152,8 @@ const Dashboard = () => {
         });
         
         setFeedbacks(feedbacksObj);
+        setProgress(statusResponse.data.progress);
+        setNextFeedback(statusResponse.data.nextFeedback || 1);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching feedbacks:', err);
@@ -171,14 +165,7 @@ const Dashboard = () => {
     fetchUserFeedbacks();
   }, [navigate, currentUser]);
 
-  // Calculate progress based on completed feedbacks
-  const calculateProgress = () => {
-    const completedFeedbacks = Object.keys(feedbacks).length;
-    if (completedFeedbacks >= 3) return 100;
-    if (completedFeedbacks === 2) return 67;
-    if (completedFeedbacks === 1) return 33;
-    return 0;
-  };
+  // Use the progress state from the backend
 
   // Determine which feedback form to show based on progress
   const getAvailableFeedbacks = () => {
@@ -196,15 +183,24 @@ const Dashboard = () => {
       }));
     }
     
-    // Otherwise, only show up to the next required feedback
-    return [1, 2, 3].map(semester => ({
-      id: semester,
-      label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
-             semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
-             'Final Feedback (100% Complete)',
-      isSubmitted: !!feedbacks[semester],
-      isAvailable: semester <= completedCount + 1
-    }));
+    // Otherwise, determine which feedbacks should be available
+    return [1, 2, 3].map(semester => {
+      // If this feedback is already submitted, it should be available
+      const isSubmitted = !!feedbacks[semester];
+      // The next feedback after the last submitted one should be available
+      const isNextInSequence = semester === (completedCount + 1);
+      // Any previous feedbacks should be available
+      const isPrevious = semester <= completedCount;
+      
+      return {
+        id: semester,
+        label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
+               semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
+               'Final Feedback (100% Complete)',
+        isSubmitted: isSubmitted,
+        isAvailable: isSubmitted || isNextInSequence || isPrevious
+      };
+    });
   };
 
   if (loading) {
@@ -269,77 +265,6 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      <StyledPaper elevation={0}>
-        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-            Your Learning Journey
-          </Typography>
-          <Chip 
-            label={`${Object.keys(feedbacks).length} of 3 completed`}
-            color="primary"
-            variant="outlined"
-            sx={{ 
-              fontWeight: 600,
-              px: 1,
-              '& .MuiChip-label': {
-                px: 1.5,
-              }
-            }}
-          />
-        </Box>
-        
-        <ProgressContainer>
-          <StyledProgress variant="determinate" value={calculateProgress()} />
-          
-          {/* Milestone Markers */}
-          <Box sx={{ position: 'relative', mt: 1 }}>
-            {[0, 33, 67, 100].map((milestone, index) => (
-              <React.Fragment key={index}>
-                <MilestoneDot 
-                  active={calculateProgress() >= milestone}
-                  style={{ left: `${milestone}%` }}
-                />
-                {index < 3 && (
-                  <MilestoneLabel 
-                    active={calculateProgress() >= [0, 33, 67, 100][index + 1]}
-                    style={{ left: `${milestone}%` }}
-                  >
-                    {['Start', '20%', '50%', '100%'][index]}
-                  </MilestoneLabel>
-                )}
-              </React.Fragment>
-            ))}
-          </Box>
-        </ProgressContainer>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-              {Math.round(calculateProgress())}%
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Course Completion
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
-              {Object.keys(feedbacks).length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Feedbacks Submitted
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'warning.main' }}>
-              {3 - Object.keys(feedbacks).length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Pending Feedbacks
-            </Typography>
-          </Box>
-        </Box>
-      </StyledPaper>
-
       <Box sx={{ mb: 6 }}>
         <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
           Course Feedback Milestones
@@ -351,9 +276,9 @@ const Dashboard = () => {
                 sx={{ 
                   opacity: feedback.isAvailable ? 1 : 0.7,
                   height: '100%',
-                  background: theme => feedback.isAvailable 
+                  background: feedback.isAvailable 
                     ? 'linear-gradient(145deg, #ffffff, #f8f9ff)'
-                    : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)',
+                    : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)'
                 }}
               >
                 <StyledCardContent>
@@ -450,32 +375,34 @@ const Dashboard = () => {
                   )}
                 </StyledCardContent>
                 
-                <CardActions sx={{ p: 2, pt: 0 }}>
-                  <Button
-                    variant={feedback.isSubmitted ? 'outlined' : 'contained'}
-                    color={feedback.isSubmitted ? 'inherit' : 'primary'}
-                    fullWidth
-                    disabled={!feedback.isAvailable}
-                    onClick={() => navigate(`/feedback/${feedback.id}`)}
-                    sx={{
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: theme => `0 4px 12px ${theme.palette.primary.light}40`,
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: 'action.disabledBackground',
-                        color: 'text.disabled',
-                      },
-                    }}
-                    startIcon={feedback.isSubmitted ? <CheckCircleIcon /> : <WarningIcon />}
-                  >
-                    {feedback.isSubmitted ? 'View Submission' : 'Provide Feedback'}
-                  </Button>
-                </CardActions>
+                {!feedback.isSubmitted && (
+                  <CardActions sx={{ p: 2, pt: 0 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      disabled={!feedback.isAvailable}
+                      onClick={() => navigate(`/feedback/${feedback.id}`)}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                          boxShadow: theme => `0 4px 12px ${theme.palette.primary.light}40`,
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: 'action.disabledBackground',
+                          color: 'text.disabled',
+                        },
+                      }}
+                      startIcon={<WarningIcon />}
+                    >
+                      Provide Feedback
+                    </Button>
+                  </CardActions>
+                )}
               </StyledCard>
             </Grid>
           ))}

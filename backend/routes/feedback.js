@@ -104,19 +104,31 @@ router.get('/user-feedbacks', auth, async (req, res) => {
 });
 
 // @route   GET /api/feedback/status
-// @desc    Get feedback status for each semester
+// @desc    Get feedback status and progress
 // @access  Private
 router.get('/status', auth, async (req, res) => {
     try {
         const feedbacks = await Feedback.find({ user: req.user._id });
         const submittedSemesters = feedbacks.map(f => f.semester);
 
-        const status = {};
-        for (let i = 1; i <= 8; i++) {
-            status[`semester${i}`] = submittedSemesters.includes(i);
+        // Calculate progress percentage based on number of feedbacks submitted
+        // 1 feedback: 20% (up to first milestone)
+        // 2 feedbacks: 50% (up to second milestone)
+        // 3 feedbacks: 100% (completed)
+        let progress = 0;
+        if (submittedSemesters.length >= 3) {
+            progress = 100;  // All feedbacks completed
+        } else if (submittedSemesters.length === 2) {
+            progress = 50;   // Up to 50% after second feedback
+        } else if (submittedSemesters.length === 1) {
+            progress = 20;   // Up to 20% after first feedback
         }
 
-        res.json(status);
+        res.json({
+            progress,
+            submittedSemesters,
+            nextFeedback: submittedSemesters.length < 3 ? submittedSemesters.length + 1 : null
+        });
     } catch (err) {
         console.error('❌ Error fetching feedback status:', err);
         res.status(500).json({

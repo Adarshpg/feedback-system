@@ -289,7 +289,7 @@ const FeedbackForm = () => {
       setSubmitLoading(false);
       
       setTimeout(() => {
-        navigate('/register');
+        navigate('/dashboard');
       }, 3000);
       
     } catch (err) {
