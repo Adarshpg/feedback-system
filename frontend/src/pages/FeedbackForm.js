@@ -167,7 +167,11 @@ const scaleOptions = [
   { value: '1', label: 'Poor' },
 ];
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Ensure API URL is defined and clean up any double slashes
+const getApiUrl = () => {
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  return API_URL.replace(/([^:]\/)\/+/g, '$1');
+};
 
 const FeedbackForm = () => {
   const { phase } = useParams();
@@ -272,8 +276,13 @@ const FeedbackForm = () => {
         }))
       });
       
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const response = await axios.post(
-        `${API_BASE_URL}/feedback/submit`,
+        `${getApiUrl()}/feedback/submit`,
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -283,9 +292,10 @@ const FeedbackForm = () => {
         },
         {
           headers: {
-            'x-auth-token': localStorage.getItem('token'),
+            'x-auth-token': token,
             'Content-Type': 'application/json'
-          }
+          },
+          withCredentials: true
         }
       );
       
@@ -301,7 +311,7 @@ const FeedbackForm = () => {
     } catch (err) {
       console.error('Error submitting feedback:', err);
       
-      let errorMessage = 'Failed to submit feedback. Please try again.';
+      let errorMessage = `Failed to submit feedback: ${err.message || 'Unknown error'}`;
       
       if (err.response) {
         // Server responded with an error

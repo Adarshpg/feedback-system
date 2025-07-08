@@ -136,28 +136,48 @@ const Dashboard = () => {
           return;
         }
 
+        // Ensure API URL is defined
+        const API_URL = process.env.REACT_APP_API_URL || 'https://feedback-system-1-jqqj.onrender.com/api';
+        
+        // Clean up any double slashes in the URL
+        const cleanApiUrl = API_URL.replace(/([^:]\/)\/+/g, '$1');
+        
         const [feedbacksResponse, statusResponse] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_URL}/feedback/user-feedbacks`, {
-            headers: { 'x-auth-token': token },
+          axios.get(`${cleanApiUrl}/feedback/user-feedbacks`, {
+            headers: { 
+              'x-auth-token': token,
+              'Content-Type': 'application/json'
+            },
+            withCredentials: true
           }),
-          axios.get(`${process.env.REACT_APP_API_URL}/feedback/status`, {
-            headers: { 'x-auth-token': token },
+          axios.get(`${cleanApiUrl}/feedback/status`, {
+            headers: { 
+              'x-auth-token': token,
+              'Content-Type': 'application/json'
+            },
+            withCredentials: true
           })
         ]);
 
         // Convert array of feedbacks to an object with semester as key
         const feedbacksObj = {};
-        feedbacksResponse.data.forEach(feedback => {
-          feedbacksObj[feedback.semester] = feedback;
-        });
+        if (feedbacksResponse.data && Array.isArray(feedbacksResponse.data)) {
+          feedbacksResponse.data.forEach(feedback => {
+            feedbacksObj[feedback.semester] = feedback;
+          });
+        }
         
         setFeedbacks(feedbacksObj);
-        setProgress(statusResponse.data.progress);
-        setNextFeedback(statusResponse.data.nextFeedback || 1);
+        
+        if (statusResponse.data) {
+          setProgress(statusResponse.data.progress || 0);
+          setNextFeedback(statusResponse.data.nextFeedback || 1);
+        }
+        
         setLoading(false);
       } catch (err) {
         console.error('Error fetching feedbacks:', err);
-        setError('Failed to load your feedbacks. Please try again later.');
+        setError(`Failed to load your feedbacks: ${err.message || 'Unknown error'}`);
         setLoading(false);
       }
     };
