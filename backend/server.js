@@ -33,21 +33,30 @@ requiredEnvVars.forEach(env => {
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
+      'http://localhost:3000', // React dev server default port
       'http://localhost:3001',
       'http://localhost:5000',
-      'https://feedback.medinitechnologies.in','https://feedback-system-oyx4.vercel.app'
+      'https://feedback.medinitechnologies.in',
+      'https://feedback-system-oyx4.vercel.app',
+      'https://feedback-system-dut6.vercel.app'
     ];
     
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      console.error(`CORS error: ${origin} not allowed`);
+      return callback(new Error(msg), false);
     }
+    
+    return callback(null, true);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'auth-token'],
   exposedHeaders: ['x-auth-token'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 // Apply CORS with the above configuration

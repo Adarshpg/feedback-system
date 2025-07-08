@@ -273,13 +273,19 @@ const FeedbackForm = () => {
       });
       
       const response = await axios.post(
-        '/feedback/submit',
+        `${API_BASE_URL}/feedback/submit`,
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             question: questions.find(q => q.id === questionId)?.question || questionId,
             answer: answer.toString()
           }))
+        },
+        {
+          headers: {
+            'x-auth-token': localStorage.getItem('token'),
+            'Content-Type': 'application/json'
+          }
         }
       );
       

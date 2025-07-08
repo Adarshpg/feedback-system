@@ -137,10 +137,10 @@ const Dashboard = () => {
         }
 
         const [feedbacksResponse, statusResponse] = await Promise.all([
-          axios.get('http://localhost:5000/api/feedback/user-feedbacks', {
+          axios.get(`${process.env.REACT_APP_API_URL}/feedback/user-feedbacks`, {
             headers: { 'x-auth-token': token },
           }),
-          axios.get('http://localhost:5000/api/feedback/status', {
+          axios.get(`${process.env.REACT_APP_API_URL}/feedback/status`, {
             headers: { 'x-auth-token': token },
           })
         ]);
