@@ -33,29 +33,51 @@ requiredEnvVars.forEach(env => {
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
+      // Development
       'http://localhost:3000', // React dev server default port
       'http://localhost:3001',
       'http://localhost:5000',
+      
+      // Production
       'https://feedback.medinitechnologies.in',
-      'https://feedback-system-oyx4.vercel.app',
-      'https://feedback-system-dut6.vercel.app'
+      
+      // Vercel deployments
+      'https://feedback-system-2af6.vercel.app', // Current production
+      'https://feedback-system.vercel.app',     // Main deployment
+      'https://feedback-system-*.vercel.app',   // Any preview deployments
+      'https://*.vercel.app',                   // Any Vercel deployment
+      
+      // Netlify deployments (if any)
+      'https://*.netlify.app'
     ];
     
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (like mobile apps, curl requests, or server-side requests)
+    if (!origin) {
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      console.error(`CORS error: ${origin} not allowed`);
+    // Check if the origin matches any allowed patterns
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      // Handle wildcard domains (e.g., 'https://feedback-system-*.vercel.app')
+      if (allowedOrigin.includes('*')) {
+        const regex = new RegExp(allowedOrigin.replace(/\*/g, '.*'));
+        return regex.test(origin);
+      }
+      return origin === allowedOrigin;
+    });
+    
+    if (!isAllowed) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      console.warn(`⚠️  CORS blocked request from: ${origin}`);
       return callback(new Error(msg), false);
     }
     
     return callback(null, true);
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'auth-token'],
   exposedHeaders: ['x-auth-token'],
-  credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
