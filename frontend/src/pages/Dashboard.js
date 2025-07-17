@@ -126,6 +126,11 @@ const Dashboard = () => {
 
   const [progress, setProgress] = useState(0);
   const [nextFeedback, setNextFeedback] = useState(1);
+  
+  // Resume upload state
+  const [resumeFile, setResumeFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState({ type: '', message: '' });
 
   useEffect(() => {
     const fetchUserFeedbacks = async () => {
@@ -195,6 +200,9 @@ const Dashboard = () => {
     if (completedCount >= 3) {
       return [1, 2, 3].map(semester => ({
         id: semester,
+        title: semester === 1 ? 'Initial Feedback (20%)' : 
+               semester === 2 ? 'Mid-Course Feedback (50%)' :
+               'Final Feedback (100%)',
         label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
                semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
                'Final Feedback (100% Complete)',
@@ -214,6 +222,9 @@ const Dashboard = () => {
       
       return {
         id: semester,
+        title: semester === 1 ? 'Initial Feedback (20%)' : 
+               semester === 2 ? 'Mid-Course Feedback (50%)' :
+               'Final Feedback (100%)',
         label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
                semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
                'Final Feedback (100% Complete)',
@@ -221,6 +232,419 @@ const Dashboard = () => {
         isAvailable: isSubmitted || isNextInSequence || isPrevious
       };
     });
+  };
+
+  const renderMilestoneCards = () => {
+    const feedbackCards = getAvailableFeedbacks();
+    const cards = [];
+    
+    // Render Initial Feedback (20%) - Card 1
+    const initialFeedback = feedbackCards.find(f => f.id === 1);
+    if (initialFeedback) {
+      cards.push(
+        <Grid item xs={12} md={3} key={initialFeedback.id}>
+          <StyledCard
+            sx={{
+              backgroundColor: initialFeedback.isSubmitted 
+                ? 'success.50' 
+                : initialFeedback.isAvailable 
+                  ? 'warning.50' 
+                  : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)'
+            }}
+          >
+            <StyledCardContent>
+              <PhaseTitle variant="h6" component="h2">
+                {initialFeedback.title}
+                {initialFeedback.isSubmitted ? (
+                  <Chip
+                    icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
+                    label="Submitted"
+                    color="success"
+                    variant="outlined"
+                    size="small"
+                  />
+                ) : (
+                  <Chip
+                    icon={<WarningIcon style={{ color: initialFeedback.isAvailable ? '#ed6c02' : '#9e9e9e' }} />}
+                    label={initialFeedback.isAvailable ? 'Pending' : 'Locked'}
+                    color={initialFeedback.isAvailable ? 'warning' : 'default'}
+                    variant="outlined"
+                    size="small"
+                  />
+                )}
+              </PhaseTitle>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={20}
+                  color={initialFeedback.isSubmitted ? 'success' : 'primary'}
+                  sx={{ flexGrow: 1, height: 6, borderRadius: 3, mr: 1 }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
+                  20%
+                </Typography>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
+                Share your initial thoughts after completing the first 20% of the course.
+              </Typography>
+              
+              {initialFeedback.isSubmitted ? (
+                <Box sx={{ backgroundColor: 'success.50', p: 1.5, borderRadius: 1, borderLeft: '4px solid', borderColor: 'success.main', mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
+                    <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+                    Submitted on {new Date(feedbacks[initialFeedback.id].submissionDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: initialFeedback.isAvailable ? 'warning.dark' : 'text.disabled', fontStyle: 'italic', mb: 2, minHeight: 40, display: 'flex', alignItems: 'center' }}>
+                  {initialFeedback.isAvailable ? '✓ Ready to collect your feedback' : '🔒 Complete previous milestone to unlock'}
+                </Typography>
+              )}
+            </StyledCardContent>
+            
+            {!initialFeedback.isSubmitted && (
+              <CardActions sx={{ p: 2, pt: 0 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  disabled={!initialFeedback.isAvailable}
+                  onClick={() => navigate(`/feedback/${initialFeedback.id}`)}
+                  sx={{ py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+                  startIcon={<WarningIcon />}
+                >
+                  Provide Feedback
+                </Button>
+              </CardActions>
+            )}
+          </StyledCard>
+        </Grid>
+      );
+    }
+    
+    // Render Mid-Course Feedback (50%) - Card 2
+    const midFeedback = feedbackCards.find(f => f.id === 2);
+    if (midFeedback) {
+      cards.push(
+        <Grid item xs={12} md={3} key={midFeedback.id}>
+          <StyledCard
+            sx={{
+              backgroundColor: midFeedback.isSubmitted 
+                ? 'success.50' 
+                : midFeedback.isAvailable 
+                  ? 'warning.50' 
+                  : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)'
+            }}
+          >
+            <StyledCardContent>
+              <PhaseTitle variant="h6" component="h2">
+                {midFeedback.title}
+                {midFeedback.isSubmitted ? (
+                  <Chip
+                    icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
+                    label="Submitted"
+                    color="success"
+                    variant="outlined"
+                    size="small"
+                  />
+                ) : (
+                  <Chip
+                    icon={<WarningIcon style={{ color: midFeedback.isAvailable ? '#ed6c02' : '#9e9e9e' }} />}
+                    label={midFeedback.isAvailable ? 'Pending' : 'Locked'}
+                    color={midFeedback.isAvailable ? 'warning' : 'default'}
+                    variant="outlined"
+                    size="small"
+                  />
+                )}
+              </PhaseTitle>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={50}
+                  color={midFeedback.isSubmitted ? 'success' : 'primary'}
+                  sx={{ flexGrow: 1, height: 6, borderRadius: 3, mr: 1 }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
+                  50%
+                </Typography>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
+                Provide mid-course feedback after reaching the 50% completion mark.
+              </Typography>
+              
+              {midFeedback.isSubmitted ? (
+                <Box sx={{ backgroundColor: 'success.50', p: 1.5, borderRadius: 1, borderLeft: '4px solid', borderColor: 'success.main', mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
+                    <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+                    Submitted on {new Date(feedbacks[midFeedback.id].submissionDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: midFeedback.isAvailable ? 'warning.dark' : 'text.disabled', fontStyle: 'italic', mb: 2, minHeight: 40, display: 'flex', alignItems: 'center' }}>
+                  {midFeedback.isAvailable ? '✓ Ready to collect your feedback' : '🔒 Complete previous milestone to unlock'}
+                </Typography>
+              )}
+            </StyledCardContent>
+            
+            {!midFeedback.isSubmitted && (
+              <CardActions sx={{ p: 2, pt: 0 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  disabled={!midFeedback.isAvailable}
+                  onClick={() => navigate(`/feedback/${midFeedback.id}`)}
+                  sx={{ py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+                  startIcon={<WarningIcon />}
+                >
+                  Provide Feedback
+                </Button>
+              </CardActions>
+            )}
+          </StyledCard>
+        </Grid>
+      );
+    }
+    
+    // Render Resume Upload - Card 3
+    cards.push(
+      <Grid item xs={12} md={3} key="resume-upload">
+        <StyledCard>
+          <StyledCardContent>
+            <PhaseTitle variant="h6" component="h2">
+              Resume Upload
+              {feedbacks.resumeUpload?.filePath ? (
+                <Chip
+                  icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
+                  label="Uploaded"
+                  color="success"
+                  variant="outlined"
+                  size="small"
+                />
+              ) : (
+                <Chip
+                  icon={<WarningIcon style={{ color: feedbacks[2] ? '#ed6c02' : '#9e9e9e' }} />}
+                  label={feedbacks[2] ? 'Pending' : 'Locked'}
+                  color={feedbacks[2] ? 'warning' : 'default'}
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+            </PhaseTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <LinearProgress
+                variant="determinate"
+                value={feedbacks.resumeUpload?.filePath ? 100 : feedbacks[2] ? 50 : 0}
+                color={feedbacks.resumeUpload?.filePath ? 'success' : 'primary'}
+                sx={{ flexGrow: 1, height: 6, borderRadius: 3, mr: 1 }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
+                {feedbacks.resumeUpload?.filePath ? '100%' : feedbacks[2] ? '50%' : '0%'}
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
+              Upload your resume after submitting your Mid-Course Feedback. Accepted formats: PDF, DOC, DOCX.
+            </Typography>
+            {feedbacks.resumeUpload?.filePath ? (
+              <Box sx={{ backgroundColor: 'success.50', p: 1.5, borderRadius: 1, borderLeft: '4px solid', borderColor: 'success.main', mb: 2 }}>
+                <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
+                  <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+                  Resume uploaded
+                </Typography>
+                <Button
+                  variant="text"
+                  size="small"
+                  href={feedbacks.resumeUpload.filePath}
+                  target="_blank"
+                  sx={{ mt: 1 }}
+                >
+                  View Uploaded Resume
+                </Button>
+              </Box>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: feedbacks[2] ? 'warning.dark' : 'text.disabled',
+                  fontStyle: 'italic',
+                  mb: 2,
+                  minHeight: 40,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                {feedbacks[2]
+                  ? '✓ Ready to upload your resume'
+                  : '🔒 Complete Mid-Course Feedback to unlock'}
+              </Typography>
+            )}
+          </StyledCardContent>
+          {!feedbacks.resumeUpload?.filePath && feedbacks[2] && (
+            <CardActions sx={{ p: 2, pt: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+              <input
+                accept=".pdf,.doc,.docx"
+                style={{ display: 'none' }}
+                id="resume-upload-card"
+                type="file"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) setResumeFile(file);
+                }}
+              />
+              <label htmlFor="resume-upload-card">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<WarningIcon />}
+                  sx={{ mb: 1 }}
+                >
+                  Choose File
+                </Button>
+              </label>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={async () => {
+                  if (!resumeFile) return;
+                  setIsUploading(true);
+                  setUploadStatus({ type: '', message: '' });
+                  const formData = new FormData();
+                  formData.append('resume', resumeFile);
+                  try {
+                    // Since axios.defaults.baseURL is already set to include /api in AuthContext,
+                    // we just need to use the relative path
+                    const token = localStorage.getItem('token');
+                    const response = await axios.post('/upload-resume', formData, {
+                      headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`
+                      }
+                    });
+                    setUploadStatus({ type: 'success', message: 'Resume uploaded successfully!' });
+                    setResumeFile(null);
+                    setFeedbacks(prev => ({ ...prev, resumeUpload: { filePath: response.data.filePath } }));
+                  } catch (error) {
+                    setUploadStatus({ type: 'error', message: error.response?.data?.message || 'Upload failed' });
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }}
+                disabled={!resumeFile || isUploading}
+                startIcon={isUploading ? <CircularProgress size={20} /> : <WarningIcon />}
+              >
+                {isUploading ? 'Uploading...' : 'Upload Resume'}
+              </Button>
+              {resumeFile && (
+                <Typography variant="caption" sx={{ mt: 1 }}>
+                  Selected: {resumeFile.name}
+                </Typography>
+              )}
+              {uploadStatus.message && (
+                <Typography
+                  color={uploadStatus.type === 'error' ? 'error' : 'success'}
+                  variant="caption"
+                  sx={{ mt: 1, display: 'block' }}
+                >
+                  {uploadStatus.message}
+                </Typography>
+              )}
+            </CardActions>
+          )}
+        </StyledCard>
+      </Grid>
+    );
+    
+    // Render Final Feedback (100%) - Card 4
+    const finalFeedback = feedbackCards.find(f => f.id === 3);
+    if (finalFeedback) {
+      cards.push(
+        <Grid item xs={12} md={3} key={finalFeedback.id}>
+          <StyledCard
+            sx={{
+              backgroundColor: finalFeedback.isSubmitted 
+                ? 'success.50' 
+                : finalFeedback.isAvailable 
+                  ? 'warning.50' 
+                  : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)'
+            }}
+          >
+            <StyledCardContent>
+              <PhaseTitle variant="h6" component="h2">
+                {finalFeedback.title}
+                {finalFeedback.isSubmitted ? (
+                  <Chip
+                    icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
+                    label="Submitted"
+                    color="success"
+                    variant="outlined"
+                    size="small"
+                  />
+                ) : (
+                  <Chip
+                    icon={<WarningIcon style={{ color: finalFeedback.isAvailable ? '#ed6c02' : '#9e9e9e' }} />}
+                    label={finalFeedback.isAvailable ? 'Pending' : 'Locked'}
+                    color={finalFeedback.isAvailable ? 'warning' : 'default'}
+                    variant="outlined"
+                    size="small"
+                  />
+                )}
+              </PhaseTitle>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={100}
+                  color={finalFeedback.isSubmitted ? 'success' : 'primary'}
+                  sx={{ flexGrow: 1, height: 6, borderRadius: 3, mr: 1 }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
+                  100%
+                </Typography>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
+                Share your final thoughts after completing the entire course.
+              </Typography>
+              
+              {finalFeedback.isSubmitted ? (
+                <Box sx={{ backgroundColor: 'success.50', p: 1.5, borderRadius: 1, borderLeft: '4px solid', borderColor: 'success.main', mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
+                    <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+                    Submitted on {new Date(feedbacks[finalFeedback.id].submissionDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: finalFeedback.isAvailable ? 'warning.dark' : 'text.disabled', fontStyle: 'italic', mb: 2, minHeight: 40, display: 'flex', alignItems: 'center' }}>
+                  {finalFeedback.isAvailable ? '✓ Ready to collect your feedback' : '🔒 Complete previous milestone to unlock'}
+                </Typography>
+              )}
+            </StyledCardContent>
+            
+            {!finalFeedback.isSubmitted && (
+              <CardActions sx={{ p: 2, pt: 0 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  disabled={!finalFeedback.isAvailable}
+                  onClick={() => navigate(`/feedback/${finalFeedback.id}`)}
+                  sx={{ py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+                  startIcon={<WarningIcon />}
+                >
+                  Provide Feedback
+                </Button>
+              </CardActions>
+            )}
+          </StyledCard>
+        </Grid>
+      );
+    }
+    
+    return cards;
   };
 
   if (loading) {
@@ -285,150 +709,10 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      <Box sx={{ mb: 6 }}>
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
-          Course Feedback Milestones
-        </Typography>
-        <Grid container spacing={3}>
-          {getAvailableFeedbacks().map((feedback) => (
-            <Grid item xs={12} md={4} key={feedback.id}>
-              <StyledCard 
-                sx={{ 
-                  opacity: feedback.isAvailable ? 1 : 0.7,
-                  height: '100%',
-                  background: feedback.isAvailable 
-                    ? 'linear-gradient(145deg, #ffffff, #f8f9ff)'
-                    : 'linear-gradient(145deg, #f8f9ff, #f0f2f5)'
-                }}
-              >
-                <StyledCardContent>
-                  <PhaseTitle variant="h6" component="h2">
-                    {feedback.label.split(' (')[0]}
-                    {feedback.isSubmitted ? (
-                      <Chip
-                        icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
-                        label="Submitted"
-                        color="success"
-                        variant="outlined"
-                        size="small"
-                      />
-                    ) : (
-                      <Chip
-                        icon={<WarningIcon style={{ 
-                          color: feedback.isAvailable ? '#ed6c02' : '#9e9e9e' 
-                        }} />}
-                        label={feedback.isAvailable ? 'Pending' : 'Locked'}
-                        color={feedback.isAvailable ? 'warning' : 'default'}
-                        variant="outlined"
-                        size="small"
-                      />
-                    )}
-                  </PhaseTitle>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    mb: 2,
-                    '& .MuiLinearProgress-root': {
-                      flexGrow: 1,
-                      height: 6,
-                      borderRadius: 3,
-                      mr: 1,
-                    }
-                  }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={feedback.id === 1 ? 20 : feedback.id === 2 ? 50 : 100}
-                      color={feedback.isSubmitted ? 'success' : 'primary'}
-                      sx={{
-                        backgroundColor: theme => theme.palette.grey[200],
-                        '& .MuiLinearProgress-bar': {
-                          background: feedback.isSubmitted 
-                            ? 'linear-gradient(90deg, #4caf50, #81c784)'
-                            : 'linear-gradient(90deg, #1976d2, #64b5f6)',
-                        }
-                      }}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
-                      {feedback.id === 1 ? '20%' : feedback.id === 2 ? '50%' : '100%'}
-                    </Typography>
-                  </Box>
-                  
-                  <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
-                    {feedback.id === 1 
-                      ? 'Share your initial thoughts after completing the first 20% of the course.' 
-                      : feedback.id === 2 
-                        ? 'Provide mid-course feedback after reaching the 50% completion mark.'
-                        : 'Share your final thoughts after completing the entire course.'}
-                  </Typography>
-                  
-                  {feedback.isSubmitted ? (
-                    <Box sx={{ 
-                      backgroundColor: 'success.50',
-                      p: 1.5,
-                      borderRadius: 1,
-                      borderLeft: '4px solid',
-                      borderColor: 'success.main',
-                      mb: 2
-                    }}>
-                      <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
-                        <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
-                        Submitted on {new Date(feedbacks[feedback.id].submissionDate).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: feedback.isAvailable ? 'warning.dark' : 'text.disabled',
-                        fontStyle: 'italic',
-                        mb: 2,
-                        minHeight: 40,
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {feedback.isAvailable 
-                        ? '✓ Ready to collect your feedback' 
-                        : '🔒 Complete previous milestone to unlock'}
-                    </Typography>
-                  )}
-                </StyledCardContent>
-                
-                {!feedback.isSubmitted && (
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      disabled={!feedback.isAvailable}
-                      onClick={() => navigate(`/feedback/${feedback.id}`)}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        '&:hover': {
-                          transform: 'translateY(-1px)',
-                          boxShadow: theme => `0 4px 12px ${theme.palette.primary.light}40`,
-                        },
-                        '&.Mui-disabled': {
-                          backgroundColor: 'action.disabledBackground',
-                          color: 'text.disabled',
-                        },
-                      }}
-                      startIcon={<WarningIcon />}
-                    >
-                      Provide Feedback
-                    </Button>
-                  </CardActions>
-                )}
-              </StyledCard>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-      
+      <Grid container spacing={3}>
+        {renderMilestoneCards()}
+      </Grid>
+
       <StyledPaper sx={{ background: 'linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%)' }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center' }}>
           <Box sx={{ flex: 1, pr: { md: 4 } }}>

@@ -9,131 +9,99 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const compression = require('compression');
+const cors = require('cors');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
+const uploadRoutes = require('./routes/upload'); // ✅ Merged route
 
-// Initialize express app
 const app = express();
-
-// Trust proxy for production
 app.set('trust proxy', 1);
 
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
-requiredEnvVars.forEach(env => {
+// ✅ Validate required environment variables
+['MONGODB_URI', 'JWT_SECRET'].forEach(env => {
   if (!process.env[env]) {
     console.error(`❌ Required environment variable ${env} is not set`);
     process.exit(1);
   }
 });
 
-// CORS configuration
+// ✅ CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      // Development
-      'http://localhost:3000', // React dev server default port
+      'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5000',
-      
-      // Production
       'https://feedback.medinitechnologies.in',
-      
-      // Vercel deployments
-      'https://feedback-system-2af6.vercel.app', // Current production
-      'https://feedback-system.vercel.app',     // Main deployment
-      'https://feedback-system-*.vercel.app',   // Any preview deployments
-      'https://*.vercel.app',                   // Any Vercel deployment
-      
-      // Netlify deployments (if any)
-      'https://*.netlify.app'
+      'https://feedback-system-2af6.vercel.app',
+      'https://feedback-system.vercel.app',
+      'https://feedback-system-*.vercel.app',
+      'https://*.vercel.app',
+      'https://*.netlify.app',
     ];
-    
-    // Allow requests with no origin (like mobile apps, curl requests, or server-side requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Check if the origin matches any allowed patterns
+    if (!origin) return callback(null, true);
+
     const isAllowed = allowedOrigins.some(allowedOrigin => {
-      // Handle wildcard domains (e.g., 'https://feedback-system-*.vercel.app')
       if (allowedOrigin.includes('*')) {
         const regex = new RegExp(allowedOrigin.replace(/\*/g, '.*'));
         return regex.test(origin);
       }
       return origin === allowedOrigin;
     });
-    
+
     if (!isAllowed) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
       console.warn(`⚠️  CORS blocked request from: ${origin}`);
-      return callback(new Error(msg), false);
+      return callback(new Error(`CORS blocked request from: ${origin}`), false);
     }
-    
+
     return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'auth-token'],
   exposedHeaders: ['x-auth-token'],
-  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  optionsSuccessStatus: 200
 };
 
-// Apply CORS with the above configuration
-app.use(require('cors')(corsOptions));
+app.use(cors(corsOptions));
 
-// Security middleware
+// ✅ Middleware
 app.use(helmet());
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-// Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
-
-// Data sanitization against XSS
 app.use(xss());
-
-// Prevent parameter pollution
-app.use(hpp({
-  whitelist: [] // Add any parameters you want to whitelist
-}));
-
-// Compress all responses
+app.use(hpp({ whitelist: [] }));
 app.use(compression());
 
-// Development logging
+// ✅ Dev logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting
+// ✅ Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP, try again later'
 });
 app.use('/api', limiter);
 
-// Log environment info
+// ✅ Logging env
 console.log('🚀 Starting server...');
 console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔗 MongoDB URI: ${process.env.MONGODB_URI ? '✅ Set' : '❌ NOT SET'}`);
 console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SET'}`);
 
-// Database connection with enhanced error handling
+// ✅ MongoDB connection
 const connectDB = async (retryCount = 0) => {
   const maxRetries = 5;
   const retryDelay = 5000;
 
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
-    }
-
-    console.log(`🔌 Attempting to connect to MongoDB (Attempt ${retryCount + 1}/${maxRetries})...`);
-    
+    console.log(`🔌 Connecting to MongoDB (Attempt ${retryCount + 1}/${maxRetries})...`);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -141,149 +109,110 @@ const connectDB = async (retryCount = 0) => {
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
     });
-
-    console.log('✅ MongoDB connected successfully');
+    console.log('✅ MongoDB connected');
   } catch (err) {
-    console.error(`❌ MongoDB connection error: ${err.message}`);
-    
+    console.error(`❌ MongoDB error: ${err.message}`);
     if (retryCount < maxRetries - 1) {
-      console.log(`⏳ Retrying connection in ${retryDelay / 1000} seconds...`);
+      console.log(`⏳ Retrying in ${retryDelay / 1000}s...`);
       setTimeout(() => connectDB(retryCount + 1), retryDelay);
     } else {
-      console.error('❌ Max retries reached. Could not connect to MongoDB.');
+      console.error('❌ Max retries reached');
       process.exit(1);
     }
   }
 };
 
-// MongoDB event listeners
-mongoose.connection.on('connected', () => {
-  console.log('✅ Mongoose connected to MongoDB');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error(`❌ Mongoose connection error: ${err.message}`);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('ℹ️  Mongoose disconnected from MongoDB');
-});
-
-// Initial connection
+mongoose.connection.on('connected', () => console.log('✅ Mongoose connected'));
+mongoose.connection.on('error', err => console.error(`❌ Mongoose error: ${err.message}`));
+mongoose.connection.on('disconnected', () => console.log('ℹ️  Mongoose disconnected'));
 connectDB();
 
-// Test route
-app.get('/api/test', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'API is working!',
-    timestamp: new Date().toISOString()
-  });
-});
+// ✅ Routes
+app.get('/api/test', (req, res) => res.status(200).json({ status: 'success', message: 'API is working!', timestamp: new Date().toISOString() }));
 
-// Handle OPTIONS requests
+// ✅ Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // ✅ Uploads route
+
+// ✅ API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api', uploadRoutes); // ✅ Route registered
+
+// ✅ OPTIONS preflight support
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, x-auth-token, Authorization');
   res.status(200).end();
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/feedback', feedbackRoutes);
-
-// Health check endpoint
+// ✅ Health check
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  const status = dbStatus === 'connected' ? 'healthy' : 'unhealthy';
-  
   res.status(200).json({
-    status,
-    timestamp: new Date().toISOString(),
+    status: dbStatus === 'connected' ? 'healthy' : 'unhealthy',
     database: dbStatus,
+    timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memoryUsage: process.memoryUsage(),
   });
 });
 
-// 404 handler for API routes
+// ✅ 404 handler
 app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
+  res.status(404).json({ status: 'error', message: `Cannot ${req.method} ${req.originalUrl}` });
 });
 
-// Serve static files in production
+// ✅ Production static files
 if (process.env.NODE_ENV === 'production') {
   const staticPath = path.join(__dirname, '../frontend/build');
   app.use(express.static(staticPath));
-  
   app.get('*', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'), (err) => {
+    res.sendFile(path.join(staticPath, 'index.html'), err => {
       if (err) {
         console.error('Error sending file:', err);
-        res.status(500).send('Error loading the application');
+        res.status(500).send('Error loading the app');
       }
     });
   });
 }
 
-// Global error handler
+// ✅ Error handling
 app.use((err, req, res, next) => {
   console.error('🔥 Error:', err.stack);
-  
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-  
-  res.status(statusCode).json({
+  res.status(err.statusCode || 500).json({
     status: 'error',
-    message,
-    ...(process.env.NODE_ENV === 'development' && { 
-      stack: err.stack,
-      error: err 
-    })
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack, error: err }),
   });
 });
 
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📡 Server URL: http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
 
-// Handle unhandled promise rejections
+// ✅ Exit & error signals
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ UNHANDLED REJECTION! Shutting down...');
-  console.error('Unhandled Rejection at:', promise, 'Reason:', reason);
-  server.close(() => {
-    process.exit(1);
-  });
+  console.error('❌ UNHANDLED REJECTION:', reason);
+  server.close(() => process.exit(1));
 });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('🔥 UNCAUGHT EXCEPTION! Shutting down...');
-  console.error(err.name, err.message);
-  server.close(() => {
-    process.exit(1);
-  });
+process.on('uncaughtException', err => {
+  console.error('🔥 UNCAUGHT EXCEPTION:', err.message);
+  server.close(() => process.exit(1));
 });
 
-// Handle SIGTERM
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM received. Shutting down gracefully...');
   server.close(() => {
-    console.log('💥 Process terminated!');
+    console.log('💥 Process terminated');
     process.exit(0);
   });
 });
 
-// Handle process exit
-process.on('exit', (code) => {
-  console.log(`Process exiting with code ${code}`);
+process.on('exit', code => {
+  console.log(`👋 Process exiting with code ${code}`);
   mongoose.connection.close();
 });
 

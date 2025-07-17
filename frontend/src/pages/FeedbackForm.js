@@ -29,6 +29,8 @@ import {
 import { styled } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { Tab, Tabs } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';  
 
 // Styled components
 const PREFIX = 'FeedbackForm';
@@ -87,6 +89,46 @@ const Root = styled('div')(({ theme }) => ({
 const questionsBySemester = {
   1: [
     {
+      id: 'industry',
+      type: 'radio',
+      question: 'Which Of The Following Categories Best Describes Your Organization\'s Primary Industry?',
+      required: true,
+      options: [
+        { value: 'architecture', label: 'Architecture, Engineering & Construction Industry' },
+        { value: 'manufacturing', label: 'Manufacturing Industry' },
+        { value: 'sales', label: 'Sales & Marketing' },
+        { value: 'designer', label: 'Designer' },
+        { value: 'education', label: 'Education sector' },
+        { value: 'electrical', label: 'Electrical Industry' }
+      ]
+    },
+    {
+      id: 'role',
+      type: 'radio',
+      question: 'What is your primary role in your organization?',
+      required: true,
+      options: [
+        { value: 'entry', label: 'Entry-level Employee' },
+        { value: 'mid', label: 'Mid-level Manager' },
+        { value: 'senior', label: 'Senior Management' },
+        { value: 'executive', label: 'Executive/C-level' },
+        { value: 'founder', label: 'Founder/Entrepreneur' },
+        { value: 'other_role', label: 'Other (please specify)' }
+      ]
+    },
+    {
+      id: 'q0',
+      type: 'radio',
+      question: 'Which of the following best describes you?',
+      required: true,
+      options: [
+        { value: 'higher_ed', label: 'Higher Education Student (College / University)' },
+        { value: 'professional', label: 'Working Professional' },
+        { value: 'educator', label: 'Educator' },
+        { value: 'job_seeker', label: 'Looking for a Job' }
+      ]
+    },
+    {
       id: 'q1',
       type: 'scale',
       question: 'How would you rate the clarity and organization of the course content?',
@@ -95,14 +137,14 @@ const questionsBySemester = {
     {
       id: 'q2',
       type: 'scale',
-      question: 'How effective are the teaching methods in helping you understand the material?',
+      question: 'How effective are the teaching methods in helping you understand the topics?',
       required: true,
     },
     {
       id: 'q3',
       type: 'scale',
-      question: 'How well do the learning resources (materials, tools, etc.) support your learning?',
-      required: true,
+      question: 'How well do the learning resources (course, tools, etc.) support your learning?',
+      required: true
     },
     {
       id: 'q4',
@@ -118,6 +160,70 @@ const questionsBySemester = {
     },
   ],
   2: [
+    {
+      id: 'satisfaction_overall',
+      type: 'satisfaction',
+      question: 'a) Overall Experience',
+      required: true
+    },
+    {
+      id: 'satisfaction_equipment',
+      type: 'satisfaction',
+      question: 'b) Computer Equipment',
+      required: true
+    },
+    {
+      id: 'satisfaction_facility',
+      type: 'satisfaction',
+      question: 'c) Training Facility',
+      required: true
+    },
+    {
+      id: 'satisfaction_instructor',
+      type: 'satisfaction',
+      question: 'd) Instructor',
+      required: true
+    },
+    {
+      id: 'instructor_communication',
+      type: 'scale',
+      question: 'Communication from the Instructor',
+      required: true,
+      scaleLabels: {
+        left: 'Very bad',
+        right: 'Very good'
+      }
+    },
+    {
+      id: 'instructor_knowledge',
+      type: 'scale',
+      question: 'Software Knowledge of the Instructor',
+      required: true,
+      scaleLabels: {
+        left: 'Very bad',
+        right: 'Very good'
+      }
+    },
+    {
+      id: 'lab_support',
+      type: 'scale',
+      question: 'Support in Lab',
+      required: true,
+      scaleLabels: {
+        left: 'Very bad',
+        right: 'Very good'
+      }
+    },
+    {
+      id: 'continue_learning',
+      type: 'scale',
+      question: 'How likely or unlikely are you to continue learning this software?',
+      required: true,
+      scaleLabels: {
+        left: 'Not at all Likely',
+        right: 'Extremely Likely'
+      }
+    },
     {
       id: 'q1',
       type: 'scale',
@@ -157,6 +263,85 @@ const questionsBySemester = {
       required: false,
     },
   ],
+  3: [
+    {
+      id: 'training_purpose',
+      type: 'radio',
+      question: 'What Do You Intend To Use This Training For?',
+      required: true,
+      options: [
+        { value: 'college_project', label: 'College/university project' },
+        { value: 'career_enhancement', label: 'Career enhancement/better job opportunity' },
+        { value: 'teach_organization', label: 'To teach others in my organization' },
+        { value: 'personal_interest', label: 'Personal interest' },
+        { value: 'current_job_productivity', label: 'To become more productive in my current job' },
+        { value: 'teach_students', label: 'To teach students at my College/University' },
+        { value: 'evaluate_product', label: 'To evaluate the product before making the purchase' }
+      ]
+    },
+    {
+      id: 'user_type',
+      type: 'radio',
+      question: 'Which of the following best describes you?',
+      required: true,
+      options: [
+        { value: 'student', label: 'Student' },
+        { value: 'educator', label: 'Educator/Teacher' },
+        { value: 'professional', label: 'Working Professional' },
+        { value: 'self_employed', label: 'Self-Employed/Entrepreneur' },
+        { value: 'job_seeker', label: 'Job Seeker' },
+        { value: 'other', label: 'Other' }
+      ]
+    },
+    {
+      id: 'learning_knowledge',
+      type: 'likert',
+      question: 'I learned new knowledge and skills',
+      required: true
+    },
+    {
+      id: 'apply_skills',
+      type: 'likert',
+      question: 'I will be able to apply the new skills I learned',
+      required: true
+    },
+    {
+      id: 'improve_performance',
+      type: 'likert',
+      question: 'The new skills I learned will improve my performance',
+      required: true
+    },
+    {
+      id: 'recommend_autodesk',
+      type: 'likert',
+      question: 'I\'m more likely to recommend Autodesk products as a result of this course',
+      required: true
+    },
+    {
+      id: 'recommendation_header',
+      type: 'info',
+      question: 'How Likely Or Unlikely Are You To Recommend The Following To A Friend Or Colleague?',
+      required: false
+    },
+    {
+      id: 'recommend_course',
+      type: 'likelihood',
+      question: 'a) This Course',
+      required: true
+    },
+    {
+      id: 'recommend_instructor',
+      type: 'likelihood',
+      question: 'b) This Instructor',
+      required: true
+    },
+    {
+      id: 'recommend_facility',
+      type: 'likelihood',
+      question: 'c) The Training Facility',
+      required: true
+    }
+  ],
 };
 
 const scaleOptions = [
@@ -171,6 +356,46 @@ const scaleOptions = [
 const getApiUrl = () => {
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   return API_URL.replace(/([^:]\/)\/+/g, '$1');
+};
+
+const renderScaleQuestion = (question, options, error, answers, handleAnswerChange) => {
+  return (
+    <FormControl component="fieldset" error={!!error} fullWidth sx={{ mb: 4 }}>
+      <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+        {question.question} {question.required && '*'}
+      </FormLabel>
+      <RadioGroup
+        row
+        aria-label={question.id}
+        name={question.id}
+        value={answers[question.id] || ''}
+        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+        sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+      >
+        {options.map((option) => (
+          <Box 
+            key={option.value} 
+            sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              flex: 1
+            }}
+          >
+            <Radio value={option.value} />
+            <Typography variant="caption" align="center" sx={{ fontSize: '0.7rem', mt: -1, lineHeight: '1.1' }}>
+              {option.label}
+            </Typography>
+          </Box>
+        ))}
+      </RadioGroup>
+      {error && (
+        <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
+          {error}
+        </Typography>
+      )}
+    </FormControl>
+  );
 };
 
 const FeedbackForm = () => {
@@ -281,8 +506,12 @@ const FeedbackForm = () => {
         throw new Error('No authentication token found');
       }
 
+      // Ensure the API URL is properly constructed
+      const apiUrl = `${getApiUrl()}/feedback/submit`.replace(/([^:]\/)\/+/g, '$1');
+      console.log('API URL:', apiUrl);
+
       const response = await axios.post(
-        `${getApiUrl()}/feedback/submit`,
+        apiUrl,
         {
           semester: parseInt(phase),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -311,26 +540,33 @@ const FeedbackForm = () => {
     } catch (err) {
       console.error('Error submitting feedback:', err);
       
+      // More detailed error logging
+      if (err.response) {
+        console.error('Error response data:', err.response.data);
+        console.error('Error status:', err.response.status);
+        console.error('Error headers:', err.response.headers);
+      } else if (err.request) {
+        console.error('Error request:', err.request);
+      }
+      
       let errorMessage = `Failed to submit feedback: ${err.message || 'Unknown error'}`;
       
       if (err.response) {
-        // Server responded with an error
-        errorMessage = err.response.data?.message || 
-                      err.response.data?.error || 
-                      errorMessage;
-                      
+        // Only redirect to login for 401 Unauthorized
         if (err.response.status === 401) {
           localStorage.removeItem('token');
           navigate('/login', { state: { from: window.location.pathname } });
           return;
         }
+        // For other errors, show the error message
+        errorMessage = err.response.data?.message || 
+                      err.response.data?.error || 
+                      errorMessage;
       } else if (err.request) {
-        // Request was made but no response received
         errorMessage = 'No response from server. Please check your internet connection.';
       }
       
       setError(errorMessage);
-    } finally {
       setSubmitLoading(false);
     }
   };
@@ -339,6 +575,36 @@ const FeedbackForm = () => {
     const error = formErrors[question.id];
     
     switch (question.type) {
+      case 'radio':
+        return (
+          <FormControl component="fieldset" error={!!error} fullWidth>
+            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+              {question.question} {question.required && '*'}
+            </FormLabel>
+            <RadioGroup
+              aria-label={question.id}
+              name={question.id}
+              value={answers[question.id] || ''}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              sx={{ gap: 1 }}
+            >
+              {question.options.map((option) => (
+                <Box key={option.value} sx={{ display: 'flex', alignItems: 'center', py: 0.5 }}>
+                  <Radio value={option.value} />
+                  <Box sx={{ ml: 1 }}>
+                    <span>{option.label}</span>
+                  </Box>
+                </Box>
+              ))}
+            </RadioGroup>
+            {error && (
+              <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
+                {error}
+              </Typography>
+            )}
+          </FormControl>
+        );
+        
       case 'scale':
         return (
           <FormControl component="fieldset" error={!!error} fullWidth>
@@ -389,6 +655,122 @@ const FeedbackForm = () => {
                 },
               }}
             />
+          </FormControl>
+        );
+
+      case 'satisfaction':
+        const satisfactionOptions = [
+          { value: '5', label: 'Very Satisfied' },
+          { value: '4', label: 'Satisfied' },
+          { value: '3', label: 'Neutral' },
+          { value: '2', label: 'Dissatisfied' },
+          { value: '1', label: 'Very Dissatisfied' }
+        ];
+        
+        return (
+          <FormControl component="fieldset" error={!!error} fullWidth sx={{ mb: 4 }}>
+            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+              {question.question} {question.required && '*'}
+            </FormLabel>
+            <RadioGroup
+              row
+              aria-label={question.id}
+              name={question.id}
+              value={answers[question.id] || ''}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+            >
+              {satisfactionOptions.map((option) => (
+                <Box 
+                  key={option.value} 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    flex: 1
+                  }}
+                >
+                  <Radio value={option.value} />
+                  <Typography variant="caption" align="center" sx={{ fontSize: '0.7rem', mt: -1 }}>
+                    {option.label}
+                  </Typography>
+                </Box>
+              ))}
+            </RadioGroup>
+            {error && (
+              <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
+                {error}
+              </Typography>
+            )}
+          </FormControl>
+        );
+        
+      case 'likert':
+        const likertOptions = [
+          { value: '1', label: 'Strongly Disagree' },
+          { value: '2', label: 'Disagree' },
+          { value: '3', label: 'Neutral' },
+          { value: '4', label: 'Agree' },
+          { value: '5', label: 'Strongly Agree' }
+        ];
+        
+        return renderScaleQuestion(question, likertOptions, error, answers, handleAnswerChange);
+        
+      case 'likelihood':
+        const likelihoodOptions = [
+          { value: '1', label: 'Not at all Likely' },
+          { value: '2', label: 'A Little Likely' },
+          { value: '3', label: 'Somewhat Likely' },
+          { value: '4', label: 'Very Likely' },
+          { value: '5', label: 'Extremely Likely' }
+        ];
+        
+        return renderScaleQuestion(question, likelihoodOptions, error, answers, handleAnswerChange);
+        
+      case 'info':
+        return (
+          <Box sx={{ mb: 3, mt: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 500, color: 'text.primary' }}>
+              {question.question}
+            </Typography>
+          </Box>
+        );
+        
+        return (
+          <FormControl component="fieldset" error={!!error} fullWidth sx={{ mb: 4 }}>
+            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+              {question.question} {question.required && '*'}
+            </FormLabel>
+            <RadioGroup
+              row
+              aria-label={question.id}
+              name={question.id}
+              value={answers[question.id] || ''}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+            >
+              {likertOptions.map((option) => (
+                <Box 
+                  key={option.value} 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    flex: 1
+                  }}
+                >
+                  <Radio value={option.value} />
+                  <Typography variant="caption" align="center" sx={{ fontSize: '0.7rem', mt: -1, lineHeight: '1.1' }}>
+                    {option.label}
+                  </Typography>
+                </Box>
+              ))}
+            </RadioGroup>
+            {error && (
+              <Typography color="error" variant="caption" sx={{ display: 'block', mt: 1 }}>
+                {error}
+              </Typography>
+            )}
           </FormControl>
         );
         
