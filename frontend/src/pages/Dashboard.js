@@ -24,12 +24,18 @@ import axios from 'axios';
 
 // Styled components using the new MUI v5 approach
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(4),
+  padding: theme.spacing(3),
+  marginBottom: theme.spacing(3),
   borderRadius: '12px',
   background: 'linear-gradient(145deg, #ffffff, #f0f2f5)',
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
   border: '1px solid rgba(0, 0, 0, 0.05)',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    borderRadius: '8px',
+    margin: theme.spacing(1),
+  },
 }));
 
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -48,6 +54,12 @@ const StyledCard = styled(Card)(({ theme }) => ({
     display: 'flex',
     flexDirection: 'column',
   },
+  [theme.breakpoints.down('sm')]: {
+    borderRadius: '8px',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+    },
+  },
 }));
 
 const StyledCardContent = styled(CardContent)(({ theme }) => ({
@@ -55,7 +67,13 @@ const StyledCardContent = styled(CardContent)(({ theme }) => ({
   padding: theme.spacing(3),
   '&:last-child': {
     paddingBottom: theme.spacing(3),
-  }
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    '&:last-child': {
+      paddingBottom: theme.spacing(2),
+    },
+  },
 }));
 
 const StyledProgress = styled(LinearProgress)(({ theme, value }) => ({
@@ -250,7 +268,7 @@ const Dashboard = () => {
     const initialFeedback = feedbackCards.find(f => f.id === 1);
     if (initialFeedback) {
       cards.push(
-        <Grid item xs={12} md={3} key={initialFeedback.id}>
+        <Grid item xs={12} sm={6} md={3} key={initialFeedback.id}>
           <StyledCard
             sx={{
               backgroundColor: initialFeedback.isSubmitted 
@@ -336,7 +354,7 @@ const Dashboard = () => {
     const midFeedback = feedbackCards.find(f => f.id === 2);
     if (midFeedback) {
       cards.push(
-        <Grid item xs={12} md={3} key={midFeedback.id}>
+        <Grid item xs={12} sm={6} md={3} key={midFeedback.id}>
           <StyledCard
             sx={{
               backgroundColor: midFeedback.isSubmitted 
@@ -420,7 +438,7 @@ const Dashboard = () => {
     
     // Render Resume Upload - Card 3
     cards.push(
-      <Grid item xs={12} md={3} key="resume-upload">
+      <Grid item xs={12} sm={6} md={3} key="resume-upload">
         <StyledCard>
           <StyledCardContent>
             <PhaseTitle variant="h6" component="h2">
@@ -570,7 +588,7 @@ const Dashboard = () => {
     const finalFeedback = feedbackCards.find(f => f.id === 3);
     if (finalFeedback) {
       cards.push(
-        <Grid item xs={12} md={3} key={finalFeedback.id}>
+        <Grid item xs={12} sm={6} md={3} key={finalFeedback.id}>
           <StyledCard
             sx={{
               backgroundColor: finalFeedback.isSubmitted 
@@ -664,8 +682,8 @@ const Dashboard = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ mb: 6 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+      <Box sx={{ mb: { xs: 4, sm: 6 } }}>
         <Typography 
           variant="h4" 
           component="h1" 
@@ -675,12 +693,14 @@ const Dashboard = () => {
             color: 'primary.main',
             display: 'flex',
             alignItems: 'center',
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
             '&:after': {
               content: '""',
               flex: 1,
-              ml: 2,
+              ml: { xs: 1, sm: 2 },
               height: '1px',
               backgroundColor: 'divider',
+              display: { xs: 'none', sm: 'block' }
             }
           }}
         >
@@ -693,7 +713,8 @@ const Dashboard = () => {
             fontWeight: 400,
             maxWidth: '800px',
             lineHeight: 1.6,
-            mb: 2
+            mb: 2,
+            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' }
           }}
         >
           Track your feedback progress and submit new feedback at key milestones of your course journey.
@@ -717,7 +738,7 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         {renderMilestoneCards()}
       </Grid>
 

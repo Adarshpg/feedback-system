@@ -29,6 +29,10 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    margin: theme.spacing(1, 0, 4, 0),
+  },
 }));
 
 const StyledForm = styled('form')({
@@ -73,7 +77,19 @@ const ContentSection = styled(Box)(({ theme }) => ({
       backgroundColor: theme.palette.action.hover,
       borderColor: theme.palette.primary.dark,
     }
-  }
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    '& h2': {
+      fontSize: '1.5rem',
+    },
+    '& h3': {
+      fontSize: '1.2rem',
+    },
+    '& p': {
+      fontSize: '0.9rem',
+    },
+  },
 }));
 
 const FormSection = styled(Box)({
@@ -182,7 +198,7 @@ const Register = () => {
 
   return (
     <StyledContainer component="main" maxWidth="lg">
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 2, md: 4 }}>
         <Grid item xs={12} md={6}>
           <FormSection>
             <StyledPaper elevation={3}>

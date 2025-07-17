@@ -26,12 +26,61 @@ const theme = createTheme({
     h5: {
       fontWeight: 600,
     },
+    h4: {
+      fontSize: '1.75rem',
+      '@media (max-width:600px)': {
+        fontSize: '1.5rem',
+      },
+    },
+    h6: {
+      fontSize: '1.25rem',
+      '@media (max-width:600px)': {
+        fontSize: '1.1rem',
+      },
+    },
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
+          '@media (max-width:600px)': {
+            fontSize: '0.875rem',
+            padding: '8px 16px',
+          },
+        },
+      },
+    },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            paddingLeft: '8px',
+            paddingRight: '8px',
+          },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            '& .MuiInputLabel-root': {
+              fontSize: '0.875rem',
+            },
+            '& .MuiInputBase-input': {
+              fontSize: '0.875rem',
+            },
+          },
         },
       },
     },

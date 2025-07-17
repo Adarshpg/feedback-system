@@ -45,43 +45,71 @@ const classes = {
 
 const Root = styled('div')(({ theme }) => ({
   [`& .${classes.paper}`]: {
-    padding: theme.spacing(4),
-    marginTop: theme.spacing(2),
+    padding: theme.spacing(3),
+    marginTop: theme.spacing(1),
     borderRadius: theme.shape.borderRadius * 2,
     boxShadow: theme.shadows[3],
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(2),
+      margin: theme.spacing(1),
+      borderRadius: theme.shape.borderRadius,
+    },
   },
   [`& .${classes.stepper}`]: {
-    padding: theme.spacing(3, 0, 5),
+    padding: theme.spacing(2, 0, 3),
     '& .MuiStepIcon-root.Mui-completed': {
       color: theme.palette.success.main,
     },
     '& .MuiStepIcon-root.Mui-active': {
       color: theme.palette.primary.main,
     },
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(1, 0, 2),
+      '& .MuiStepLabel-label': {
+        fontSize: '0.75rem',
+      },
+    },
   },
   [`& .${classes.buttons}`]: {
     display: 'flex',
     justifyContent: 'space-between',
-    marginTop: theme.spacing(4),
-    '& > *': {
-      marginLeft: theme.spacing(1),
+    marginTop: theme.spacing(3),
+    gap: theme.spacing(1),
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'column',
+      gap: theme.spacing(2),
+      '& > *': {
+        width: '100%',
+        margin: 0,
+      },
     },
   },
   [`& .${classes.question}`]: {
-    marginBottom: theme.spacing(4),
-    padding: theme.spacing(3),
+    marginBottom: theme.spacing(3),
+    padding: theme.spacing(2.5),
     borderLeft: `4px solid ${theme.palette.primary.main}`,
     backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(2),
+      marginBottom: theme.spacing(2),
+      borderLeft: `3px solid ${theme.palette.primary.main}`,
+    },
   },
   [`& .${classes.successIcon}`]: {
     fontSize: 60,
     color: theme.palette.success.main,
     marginBottom: theme.spacing(2),
+    [theme.breakpoints.down('sm')]: {
+      fontSize: 48,
+    },
   },
   [`& .${classes.dialogContent}`]: {
     textAlign: 'center',
-    padding: theme.spacing(4),
+    padding: theme.spacing(3),
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(2),
+    },
   },
 }));
 
@@ -360,8 +388,13 @@ const getApiUrl = () => {
 
 const renderScaleQuestion = (question, options, error, answers, handleAnswerChange) => {
   return (
-    <FormControl component="fieldset" error={!!error} fullWidth sx={{ mb: 4 }}>
-      <FormLabel component="legend" sx={{ mb: 2, fontWeight: 500, color: 'text.primary' }}>
+    <FormControl component="fieldset" error={!!error} fullWidth sx={{ mb: { xs: 3, sm: 4 } }}>
+      <FormLabel component="legend" sx={{ 
+        mb: 2, 
+        fontWeight: 500, 
+        color: 'text.primary',
+        fontSize: { xs: '0.95rem', sm: '1rem' }
+      }}>
         {question.question} {question.required && '*'}
       </FormLabel>
       <RadioGroup
@@ -370,7 +403,12 @@ const renderScaleQuestion = (question, options, error, answers, handleAnswerChan
         name={question.id}
         value={answers[question.id] || ''}
         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-        sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          gap: { xs: 0.5, sm: 1 },
+          flexWrap: { xs: 'wrap', sm: 'nowrap' }
+        }}
       >
         {options.map((option) => (
           <Box 
@@ -379,11 +417,31 @@ const renderScaleQuestion = (question, options, error, answers, handleAnswerChan
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center',
-              flex: 1
+              flex: { xs: '1 0 45%', sm: 1 },
+              minWidth: { xs: '80px', sm: 'auto' },
+              mb: { xs: 1, sm: 0 }
             }}
           >
-            <Radio value={option.value} />
-            <Typography variant="caption" align="center" sx={{ fontSize: '0.7rem', mt: -1, lineHeight: '1.1' }}>
+            <Radio 
+              value={option.value} 
+              sx={{ 
+                padding: { xs: '6px', sm: '9px' },
+                '& .MuiSvgIcon-root': {
+                  fontSize: { xs: '1.2rem', sm: '1.5rem' }
+                }
+              }}
+            />
+            <Typography 
+              variant="caption" 
+              align="center" 
+              sx={{ 
+                fontSize: { xs: '0.65rem', sm: '0.7rem' }, 
+                mt: -1, 
+                lineHeight: '1.1',
+                textAlign: 'center',
+                wordBreak: 'break-word'
+              }}
+            >
               {option.label}
             </Typography>
           </Box>
@@ -789,16 +847,26 @@ const FeedbackForm = () => {
 
   return (
     <Root>
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Box display="flex" alignItems="center" mb={4}>
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+        <Box display="flex" alignItems="center" mb={{ xs: 2, sm: 4 }} sx={{ flexWrap: 'wrap' }}>
           <IconButton 
             onClick={() => window.history.back()} 
-            sx={{ mr: 2, color: 'primary.main' }}
+            sx={{ mr: { xs: 1, sm: 2 }, color: 'primary.main', minWidth: 'auto' }}
             aria-label="go back"
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'primary.main',
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' },
+              lineHeight: 1.2,
+              flex: 1
+            }}
+          >
             Phase {phase} Feedback - {phase === '1' ? '20%' : phase === '2' ? '50%' : '100%'} Completion
           </Typography>
         </Box>
@@ -832,7 +900,11 @@ const FeedbackForm = () => {
                 variant="outlined"
                 disabled={activeStep === 0 || submitLoading}
                 onClick={handleBack}
-                sx={{ minWidth: 100 }}
+                sx={{ 
+                  minWidth: { xs: 80, sm: 100 },
+                  fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                  padding: { xs: '8px 16px', sm: '10px 20px' }
+                }}
               >
                 Back
               </Button>
@@ -842,7 +914,11 @@ const FeedbackForm = () => {
                   variant="contained"
                   color="primary"
                   onClick={handleNext}
-                  sx={{ minWidth: 100 }}
+                  sx={{ 
+                    minWidth: { xs: 80, sm: 100 },
+                    fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                    padding: { xs: '8px 16px', sm: '10px 20px' }
+                  }}
                 >
                   Next
                 </Button>
@@ -852,7 +928,11 @@ const FeedbackForm = () => {
                   variant="contained"
                   color="primary"
                   disabled={submitLoading}
-                  sx={{ minWidth: 150 }}
+                  sx={{ 
+                    minWidth: { xs: 120, sm: 150 },
+                    fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                    padding: { xs: '8px 16px', sm: '10px 20px' }
+                  }}
                   endIcon={submitLoading ? <CircularProgress size={20} color="inherit" /> : null}
                 >
                   {submitLoading ? 'Submitting...' : 'Submit Feedback'}

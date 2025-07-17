@@ -25,6 +25,11 @@ const StyledContainer = styled(Container)(({ theme }) => ({
   flexDirection: 'column',
   minHeight: 'calc(100vh - 64px)',
   justifyContent: 'center',
+  [theme.breakpoints.down('sm')]: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(1, 0),
+    minHeight: 'calc(100vh - 80px)',
+  },
 }));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -35,6 +40,11 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   borderRadius: '12px',
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
   overflow: 'hidden',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    borderRadius: '8px',
+    margin: theme.spacing(0, 1),
+  },
 }));
 
 const StyledForm = styled('form')({
