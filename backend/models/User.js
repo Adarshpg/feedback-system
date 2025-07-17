@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
         match: /^[0-9]{10}$/,
         unique: true
     },
+    dateOfBirth: {
+        type: Date,
+        required: true
+    },
     course: {
         type: String,
         required: true

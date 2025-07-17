@@ -37,6 +37,10 @@ const registerValidation = (data) => {
         'string.length': 'Contact number must be exactly 10 digits',
         'string.empty': 'Contact number is required'
       }),
+    dateOfBirth: Joi.date().required().messages({
+      'date.base': 'Date of birth must be a valid date',
+      'any.required': 'Date of birth is required'
+    }),
     course: Joi.string().required().messages({
       'string.empty': 'Course is required'
     }),

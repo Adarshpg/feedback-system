@@ -29,7 +29,7 @@ const handleError = (res, status = 500, message = 'Something went wrong', error 
 // ✅ Register Route
 router.post('/register', async (req, res) => {
   try {
-    const { fullName, email, rollNumber, collegeName, contactNo, course, semester, password } = req.body;
+    const { fullName, email, rollNumber, collegeName, contactNo, dateOfBirth, course, semester, password } = req.body;
 
     console.log(`🔐 Registering user: ${email} | ${new Date().toISOString()}`);
 
@@ -71,6 +71,7 @@ router.post('/register', async (req, res) => {
       rollNumber,
       collegeName,
       contactNo,
+      dateOfBirth,
       course,
       semester,
       password: hashedPassword

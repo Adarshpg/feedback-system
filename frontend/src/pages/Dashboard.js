@@ -194,7 +194,8 @@ const Dashboard = () => {
 
   // Determine which feedback form to show based on progress
   const getAvailableFeedbacks = () => {
-    const completedCount = Object.keys(feedbacks).length;
+    const completedCount = Object.keys(feedbacks).filter(key => key !== 'resumeUpload').length;
+    const isResumeSubmitted = !!feedbacks.resumeUpload?.filePath;
     
     // If all 3 feedbacks are submitted, show all
     if (completedCount >= 3) {
@@ -215,19 +216,26 @@ const Dashboard = () => {
     return [1, 2, 3].map(semester => {
       // If this feedback is already submitted, it should be available
       const isSubmitted = !!feedbacks[semester];
-      // The next feedback after the last submitted one should be available
+      
+      // For Final Feedback (semester 3), it's only available if resume is submitted
+      if (semester === 3) {
+        return {
+          id: semester,
+          title: 'Final Feedback (100%)',
+          label: 'Final Feedback (100% Complete)',
+          isSubmitted: isSubmitted,
+          isAvailable: isSubmitted || isResumeSubmitted
+        };
+      }
+      
+      // For other feedbacks, use the original logic
       const isNextInSequence = semester === (completedCount + 1);
-      // Any previous feedbacks should be available
       const isPrevious = semester <= completedCount;
       
       return {
         id: semester,
-        title: semester === 1 ? 'Initial Feedback (20%)' : 
-               semester === 2 ? 'Mid-Course Feedback (50%)' :
-               'Final Feedback (100%)',
-        label: semester === 1 ? 'Initial Feedback (20% Complete)' : 
-               semester === 2 ? 'Mid-Course Feedback (50% Complete)' :
-               'Final Feedback (100% Complete)',
+        title: semester === 1 ? 'Initial Feedback (20%)' : 'Mid-Course Feedback (50%)',
+        label: semester === 1 ? 'Initial Feedback (20% Complete)' : 'Mid-Course Feedback (50% Complete)',
         isSubmitted: isSubmitted,
         isAvailable: isSubmitted || isNextInSequence || isPrevious
       };
@@ -420,7 +428,7 @@ const Dashboard = () => {
               {feedbacks.resumeUpload?.filePath ? (
                 <Chip
                   icon={<CheckCircleIcon style={{ color: '#4caf50' }} />}
-                  label="Uploaded"
+                  label="Submitted"
                   color="success"
                   variant="outlined"
                   size="small"
@@ -453,7 +461,7 @@ const Dashboard = () => {
               <Box sx={{ backgroundColor: 'success.50', p: 1.5, borderRadius: 1, borderLeft: '4px solid', borderColor: 'success.main', mb: 2 }}>
                 <Typography variant="body2" sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
                   <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
-                  Resume uploaded
+                  Resume submitted
                 </Typography>
                 <Button
                   variant="text"
@@ -607,7 +615,7 @@ const Dashboard = () => {
               </Box>
               
               <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 2, minHeight: 48 }}>
-                Share your final thoughts after completing the entire course.
+                Share your final thoughts after completing the entire course and uploading your resume.
               </Typography>
               
               {finalFeedback.isSubmitted ? (
@@ -619,7 +627,7 @@ const Dashboard = () => {
                 </Box>
               ) : (
                 <Typography variant="body2" sx={{ color: finalFeedback.isAvailable ? 'warning.dark' : 'text.disabled', fontStyle: 'italic', mb: 2, minHeight: 40, display: 'flex', alignItems: 'center' }}>
-                  {finalFeedback.isAvailable ? '✓ Ready to collect your feedback' : '🔒 Complete previous milestone to unlock'}
+                  {finalFeedback.isAvailable ? '✓ Ready to collect your feedback' : '🔒 Upload your resume to unlock'}
                 </Typography>
               )}
             </StyledCardContent>

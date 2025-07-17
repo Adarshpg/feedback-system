@@ -99,6 +99,9 @@ const validationSchema = Yup.object({
   contactNo: Yup.string()
     .matches(/^[0-9]{10}$/, 'Contact number must be 10 digits')
     .required('Contact Number is required'),
+  dateOfBirth: Yup.date()
+    .required('Date of Birth is required')
+    .max(new Date(), 'Date of Birth cannot be in the future'),
   course: Yup.string().required('Course is required'),
   semester: Yup.number().required('Semester is required').min(1, 'Semester must be at least 1').max(8, 'Semester cannot be greater than 8'),
   password: Yup.string()
@@ -124,6 +127,7 @@ const Register = () => {
       rollNumber: '',
       collegeName: '',
       contactNo: '',
+      dateOfBirth: '',
       course: '',
       semester: '',
       password: '',
@@ -266,6 +270,25 @@ const Register = () => {
                   error={(formik.touched.contactNo && Boolean(formik.errors.contactNo)) || Boolean(fieldErrors.contactNo)}
                   helperText={(formik.touched.contactNo && formik.errors.contactNo) || fieldErrors.contactNo}
                   margin="normal"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  label="Date of Birth *"
+                  type="date"
+                  value={formik.values.dateOfBirth}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.dateOfBirth && Boolean(formik.errors.dateOfBirth)}
+                  helperText={formik.touched.dateOfBirth && formik.errors.dateOfBirth}
+                  margin="normal"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
                 />
               </Grid>
               
