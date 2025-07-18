@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import FeedbackForm from './pages/FeedbackForm';
 import ForgotPassword from './pages/ForgotPassword';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ResumesDashboard from './components/ResumesDashboard';
+import ResumesDashboardLogin from './pages/ResumesDashboardLogin';
 
 const theme = createTheme({
   palette: {
@@ -93,6 +95,12 @@ const PrivateRoute = ({ children }) => {
   return currentUser ? children : <Navigate to="/login" />;
 };
 
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('resumesAuth') === 'true';
+  return isAuthenticated ? children : <Navigate to="/resumesdashboard/login" />;
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -118,6 +126,15 @@ function App() {
                 <PrivateRoute>
                   <FeedbackForm />
                 </PrivateRoute>
+              }
+            />
+            <Route path="/resumesdashboard/login" element={<ResumesDashboardLogin />} />
+            <Route
+              path="/resumesdashboard"
+              element={
+                <ProtectedRoute>
+                  <ResumesDashboard />
+                </ProtectedRoute>
               }
             />
           </Routes>

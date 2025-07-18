@@ -76,6 +76,13 @@ const Navbar = () => {
     { label: 'Feedback', path: '/feedback/1' },
   ];
 
+  // Add admin link for admin users
+  const adminItems = currentUser?.email?.includes('admin') ? [
+    { label: 'Admin Panel', path: '/admin-dashboard' }
+  ] : [];
+
+  const allNavItems = [...navItems, ...adminItems];
+
   const authItems = [
     { label: 'Login', path: '/login' },
     { label: 'Register', path: '/register' },
@@ -133,7 +140,7 @@ const Navbar = () => {
               >
                 {isAuthenticated ? (
                   [
-                    ...navItems.map((item) => (
+                    ...allNavItems.map((item) => (
                       <MenuItem 
                         key={item.path}
                         component={RouterLink}
@@ -171,7 +178,7 @@ const Navbar = () => {
             <NavButtons>
               {isAuthenticated ? (
                 <>
-                  {navItems.map((item) => (
+                  {allNavItems.map((item) => (
                     <Button
                       key={item.path}
                       color="inherit"

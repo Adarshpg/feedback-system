@@ -15,6 +15,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const feedbackRoutes = require('./routes/feedback');
 const uploadRoutes = require('./routes/upload'); // ✅ Merged route
+const adminRoutes = require('./routes/admin'); // ✅ Admin routes
 
 const app = express();
 app.set('trust proxy', 1);
@@ -137,6 +138,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // ✅ Upl
 app.use('/api/auth', authRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api', uploadRoutes); // ✅ Route registered
+app.use('/api/admin', adminRoutes); // ✅ Admin routes registered
 
 // ✅ OPTIONS preflight support
 app.options('*', (req, res) => {

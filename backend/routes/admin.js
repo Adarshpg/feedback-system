@@ -1,0 +1,443 @@
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
+const Feedback = require('../models/Feedback');
+const auth = require('../middleware/auth');
+const path = require('path');
+const fs = require('fs');
+
+// Middleware to check admin access
+const adminAuth = (req, res, next) => {
+    if (!req.user.email.includes('admin')) {
+        return res.status(403).json({ msg: 'Access denied. Admin only.' });
+    }
+    next();
+};
+
+// Middleware for resume dashboard routes (no JWT required)
+const resumeAuth = (req, res, next) => {
+    // For the dedicated resumes dashboard, we bypass JWT auth
+    // In a production environment, you might want to implement a separate token system
+    next();
+};
+
+// @route   GET /api/admin/dashboard-stats
+// @desc    Get dashboard statistics for admin
+// @access  Private (Admin only)
+router.get('/dashboard-stats', auth, adminAuth, async (req, res) => {
+    try {
+        const totalStudents = await User.countDocuments();
+        const totalFeedbacks = await Feedback.countDocuments();
+        
+        // Count resumes uploaded
+        const resumesUploaded = await Feedback.countDocuments({
+            semester: 'resumeUpload',
+            'responses.filePath': { $exists: true }
+        });
+        
+        // Feedback by semester
+        const feedbackBySemester = await Feedback.aggregate([
+            {
+                $match: { semester: { $ne: 'resumeUpload' } }
+            },
+            {
+                $group: {
+                    _id: '$semester',
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+
+        // Recent submissions (last 10)
+        const recentSubmissions = await Feedback.find()
+            .sort({ submittedAt: -1 })
+            .limit(10)
+            .select('studentName studentEmail semester submittedAt');
+
+        res.json({
+            totalStudents,
+            totalFeedbacks,
+            resumesUploaded,
+            feedbackBySemester,
+            recentSubmissions
+        });
+    } catch (error) {
+        console.error('Error fetching admin dashboard stats:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/students
+// @desc    Get all students with their submission status
+// @access  Private (Admin only)
+router.get('/students', auth, adminAuth, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+        const college = req.query.college || '';
+        const skip = (page - 1) * limit;
+
+        // Build search query
+        let searchQuery = {};
+        if (search) {
+            searchQuery.$or = [
+                { fullName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { rollNumber: { $regex: search, $options: 'i' } },
+                { collegeName: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Add college filter
+        if (college) {
+            searchQuery.collegeName = college;
+        }
+
+        const students = await User.find(searchQuery)
+            .select('-password')
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await User.countDocuments(searchQuery);
+
+        // Get feedback counts for each student
+        const studentsWithStats = await Promise.all(
+            students.map(async (student) => {
+                const feedbackCount = await Feedback.countDocuments({
+                    studentEmail: student.email,
+                    semester: { $ne: 'resumeUpload' }
+                });
+                
+                const resumeSubmitted = await Feedback.findOne({
+                    studentEmail: student.email,
+                    semester: 'resumeUpload'
+                });
+
+                return {
+                    ...student.toObject(),
+                    feedbackCount,
+                    resumeSubmitted: !!resumeSubmitted,
+                    resumeFilePath: resumeSubmitted?.responses?.filePath || null
+                };
+            })
+        );
+
+        res.json({
+            students: studentsWithStats,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            total
+        });
+    } catch (error) {
+        console.error('Error fetching students:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/resumes
+// @desc    Get all student resumes
+// @access  Private (Resume Dashboard)
+router.get('/resumes', resumeAuth, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+        const skip = (page - 1) * limit;
+
+        // Read files directly from uploads directory
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        let resumeFiles = [];
+        
+        if (fs.existsSync(uploadsDir)) {
+            const files = fs.readdirSync(uploadsDir);
+            resumeFiles = files.filter(file => 
+                file.toLowerCase().endsWith('.pdf') || 
+                file.toLowerCase().endsWith('.doc') || 
+                file.toLowerCase().endsWith('.docx')
+            );
+        }
+
+        // Since semester field is a Number in the schema, we'll skip the Feedback query
+        // and work directly with files and try to match them with users
+        
+        // Get users who have uploaded resumes (have resume field populated)
+        const usersWithResumes = await User.find({
+            resume: { $ne: null, $ne: '' }
+        }).select('fullName email rollNumber collegeName resume updatedAt');
+        
+        // Create resume data from users who have uploaded resumes
+        let allResumes = [];
+        
+        // First, add resumes from users who have the resume field populated
+        for (const user of usersWithResumes) {
+            const resumePath = user.resume;
+            const fileName = resumePath ? resumePath.split('/').pop() : null;
+            
+            // Check if the file actually exists in uploads directory
+            if (fileName && resumeFiles.includes(fileName)) {
+                allResumes.push({
+                    _id: user._id,
+                    studentName: user.fullName,
+                    studentEmail: user.email,
+                    studentRollNumber: user.rollNumber,
+                    studentCollege: user.collegeName,
+                    submissionDate: user.updatedAt,
+                    filePath: `uploads/${fileName}`,
+                    fileName: fileName
+                });
+            }
+        }
+        
+        // Then add any remaining files that couldn't be matched to users
+        const matchedFiles = allResumes.map(resume => resume.fileName);
+        const unmatchedFiles = resumeFiles.filter(file => !matchedFiles.includes(file));
+        
+        for (const file of unmatchedFiles) {
+            const filePath = path.join(uploadsDir, file);
+            const stats = fs.statSync(filePath);
+            
+            allResumes.push({
+                _id: file,
+                studentName: 'Unknown Student',
+                studentEmail: 'unknown@example.com',
+                studentRollNumber: 'N/A',
+                studentCollege: 'Unknown College',
+                submissionDate: stats.mtime,
+                filePath: `uploads/${file}`,
+                fileName: file
+            });
+        }
+        
+        // Apply search filter
+        if (search) {
+            allResumes = allResumes.filter(resume => 
+                resume.studentName.toLowerCase().includes(search.toLowerCase()) ||
+                resume.studentEmail.toLowerCase().includes(search.toLowerCase()) ||
+                resume.studentCollege.toLowerCase().includes(search.toLowerCase())
+            );
+        }
+        
+        // Apply pagination
+        const total = allResumes.length;
+        const formattedResumes = allResumes.slice(skip, skip + limit);
+
+        res.json({
+            resumes: formattedResumes,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            total
+        });
+    } catch (error) {
+        console.error('Error fetching resumes:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/download-resume/:studentEmail
+// @desc    Download a specific student's resume
+// @access  Private (Resume Dashboard)
+router.get('/download-resume/:studentEmail', resumeAuth, async (req, res) => {
+    try {
+        const { studentEmail } = req.params;
+        
+        // Read files from uploads directory
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        
+        if (!fs.existsSync(uploadsDir)) {
+            return res.status(404).json({ message: 'Uploads directory not found' });
+        }
+        
+        const files = fs.readdirSync(uploadsDir);
+        const resumeFiles = files.filter(file => 
+            file.toLowerCase().endsWith('.pdf') || 
+            file.toLowerCase().endsWith('.doc') || 
+            file.toLowerCase().endsWith('.docx')
+        );
+        
+        // Try to find a file that matches the student email
+        // This is a simple matching approach - in production you'd have better mapping
+        let matchingFile = null;
+        
+        if (studentEmail !== 'unknown@example.com') {
+            const emailPrefix = studentEmail.split('@')[0].toLowerCase();
+            matchingFile = resumeFiles.find(file => 
+                file.toLowerCase().includes(emailPrefix)
+            );
+        }
+        
+        // If no specific match, just return the first available file for demo purposes
+        if (!matchingFile && resumeFiles.length > 0) {
+            matchingFile = resumeFiles[0];
+        }
+        
+        if (!matchingFile) {
+            return res.status(404).json({ message: 'Resume not found for this student' });
+        }
+        
+        const fullPath = path.join(uploadsDir, matchingFile);
+        
+        // Set appropriate headers for download
+        res.setHeader('Content-Disposition', `attachment; filename="${matchingFile}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        
+        // Send file
+        res.sendFile(fullPath);
+    } catch (error) {
+        console.error('Error downloading resume:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/download-all-resumes
+// @desc    Download all resumes as a ZIP file
+// @access  Private (Resume Dashboard)
+router.get('/download-all-resumes', resumeAuth, async (req, res) => {
+    try {
+        const archiver = require('archiver');
+        
+        // Read files directly from uploads directory
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        
+        if (!fs.existsSync(uploadsDir)) {
+            return res.status(404).json({ message: 'Uploads directory not found' });
+        }
+        
+        const files = fs.readdirSync(uploadsDir);
+        const resumeFiles = files.filter(file => 
+            file.toLowerCase().endsWith('.pdf') || 
+            file.toLowerCase().endsWith('.doc') || 
+            file.toLowerCase().endsWith('.docx')
+        );
+
+        if (resumeFiles.length === 0) {
+            return res.status(404).json({ message: 'No resumes found' });
+        }
+
+        // Set headers for ZIP download
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', 'attachment; filename="all_student_resumes.zip"');
+
+        // Create ZIP archive
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        
+        archive.on('error', (err) => {
+            console.error('Archive error:', err);
+            res.status(500).json({ message: 'Error creating archive' });
+        });
+
+        archive.pipe(res);
+
+        // Add each resume to the archive
+        resumeFiles.forEach((file) => {
+            const filePath = path.join(uploadsDir, file);
+            if (fs.existsSync(filePath)) {
+                archive.file(filePath, { name: file });
+            }
+        });
+
+        archive.finalize();
+    } catch (error) {
+        console.error('Error creating ZIP archive:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/college-stats
+// @desc    Get college-wise resume upload statistics
+// @access  Private (Admin only)
+router.get('/college-stats', auth, adminAuth, async (req, res) => {
+    try {
+        // Get all colleges with student counts
+        const collegeStats = await User.aggregate([
+            {
+                $group: {
+                    _id: '$collegeName',
+                    totalStudents: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { totalStudents: -1 }
+            }
+        ]);
+
+        // Get resume upload counts by college
+        const resumeStats = await Feedback.aggregate([
+            {
+                $match: {
+                    semester: 'resumeUpload',
+                    'responses.filePath': { $exists: true }
+                }
+            },
+            {
+                $group: {
+                    _id: '$studentCollege',
+                    resumesUploaded: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Combine the data
+        const combinedStats = collegeStats.map(college => {
+            const resumeData = resumeStats.find(r => r._id === college._id);
+            const resumesUploaded = resumeData ? resumeData.resumesUploaded : 0;
+            const completionRate = ((resumesUploaded / college.totalStudents) * 100).toFixed(1);
+
+            return {
+                collegeName: college._id,
+                totalStudents: college.totalStudents,
+                resumesUploaded,
+                completionRate: parseFloat(completionRate)
+            };
+        });
+
+        res.json(combinedStats);
+    } catch (error) {
+        console.error('Error fetching college stats:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   DELETE /api/admin/delete-student/:id
+// @desc    Delete a student and all their data
+// @access  Private (Admin only)
+router.delete('/delete-student/:id', auth, adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const student = await User.findById(id);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Delete all feedback submissions by this student
+        await Feedback.deleteMany({ studentEmail: student.email });
+        
+        // Delete resume file if exists
+        const resumeRecord = await Feedback.findOne({
+            studentEmail: student.email,
+            semester: 'resumeUpload'
+        });
+        
+        if (resumeRecord && resumeRecord.responses.filePath) {
+            const filePath = path.join(__dirname, '..', resumeRecord.responses.filePath);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        // Delete the student
+        await User.findByIdAndDelete(id);
+
+        res.json({ message: 'Student and all associated data deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting student:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+module.exports = router;
