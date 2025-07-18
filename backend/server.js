@@ -35,6 +35,8 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5000',
+      'http://192.168.58.13:3000',
+      'http://192.168.58.13:5000',
       'https://feedback.medinitechnologies.in',
       'https://feedback-system-2af6.vercel.app',
       'https://feedback-system.vercel.app',
