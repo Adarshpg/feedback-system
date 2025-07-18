@@ -2,12 +2,11 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
 // Set base URL for API requests
-// For production deployment
+// Using Render deployment for both development and production
 const API_BASE_URL = 'https://feedback-system-1-jqqj.onrender.com/api';
 
-// For local development
-#const API_BASE_URL = 'http://localhost:5000/api';
-// Configure axios defaults
+// For local development, uncomment the line below and comment the line above
+// const API_BASE_URL = 'http://localhost:5000/api';
 axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.withCredentials = true;
 console.log('Using API base URL:', API_BASE_URL);
