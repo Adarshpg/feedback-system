@@ -58,12 +58,18 @@ router.post('/upload-resume', auth, async (req, res) => {
         cb(null, uploadDir);
       },
       filename: (req, file, cb) => {
-        // Create meaningful filename with student info
-        const sanitizedName = user.fullName.replace(/[^a-zA-Z0-9]/g, '_');
-        const sanitizedEmail = user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_');
-        const timestamp = Date.now();
+        // Create clean filename with user's name
+        const sanitizedName = user.fullName
+          .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters but keep spaces
+          .replace(/\s+/g, '_') // Replace spaces with underscores
+          .toLowerCase(); // Convert to lowercase for consistency
+        
+        const rollNumber = user.rollNumber || 'no_roll';
+        const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format
         const extension = path.extname(file.originalname);
-        const filename = `${sanitizedName}_${sanitizedEmail}_${user.rollNumber}_${timestamp}${extension}`;
+        
+        // Format: username_rollnumber_date.extension
+        const filename = `${sanitizedName}_${rollNumber}_${timestamp}${extension}`;
         cb(null, filename);
       }
     });
@@ -85,17 +91,28 @@ router.post('/upload-resume', auth, async (req, res) => {
       }
 
       if (!req.file) {
+        console.log('No file uploaded or invalid file type');
         return res.status(400).json({ 
           success: false, 
           message: 'No file uploaded or invalid file type' 
         });
       }
+      
+      console.log('File uploaded successfully:', req.file.filename);
+      console.log('User ID:', req.user.id);
 
       // Update user record with resume path
       const fileUrl = `/uploads/${req.file.filename}`;
-      await User.findByIdAndUpdate(req.user.id, { 
+      console.log(`Updating user ${req.user.id} with resume path: ${fileUrl}`);
+      
+      const updatedUser = await User.findByIdAndUpdate(req.user.id, { 
         resume: fileUrl 
-      });
+      }, { new: true });
+      
+      console.log(`User updated successfully. Resume field: ${updatedUser.resume}`);
+      console.log(`File saved as: ${req.file.filename}`);
+      console.log(`User: ${updatedUser.fullName} (${updatedUser.email})`);
+      console.log(`Roll Number: ${updatedUser.rollNumber}`);
 
       res.status(200).json({ 
         success: true, 

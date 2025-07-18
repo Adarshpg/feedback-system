@@ -69,7 +69,8 @@ const ResumesDashboard = () => {
 
     const handleDownload = async (studentEmail, studentName) => {
         try {
-            const response = await axios.get(`/admin/download-resume/${studentEmail}`, {
+            console.log(`Downloading resume for: ${studentName}`);
+            const response = await axios.get(`/admin/download-resume-by-name/${encodeURIComponent(studentName)}`, {
                 responseType: 'blob',
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));

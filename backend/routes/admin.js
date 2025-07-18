@@ -243,11 +243,36 @@ router.get('/resumes', resumeAuth, async (req, res) => {
             // Check if we have feedback data for this file
             const feedbackData = feedbackFileMap.get(file);
             
+            // Try to extract student info from new filename format: username_rollnumber_date.extension
+            let extractedName = 'Unknown Student';
+            let extractedRoll = 'N/A';
+            let extractedEmail = 'unknown@example.com';
+            
+            if (file.includes('_')) {
+                const parts = file.split('_');
+                if (parts.length >= 2) {
+                    // Format: username_rollnumber_date.extension
+                    extractedName = parts[0].replace(/[_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
+                    extractedRoll = parts[1];
+                    
+                    // Try to find user by roll number to get email and college
+                    try {
+                        const userByRoll = await User.findOne({ rollNumber: extractedRoll }).select('email collegeName fullName');
+                        if (userByRoll) {
+                            extractedEmail = userByRoll.email;
+                            extractedName = userByRoll.fullName; // Use actual name from database
+                        }
+                    } catch (err) {
+                        console.log('Could not find user by roll number:', extractedRoll);
+                    }
+                }
+            }
+            
             allResumes.push({
                 _id: file,
-                studentName: feedbackData ? feedbackData.studentName : 'Unknown Student',
-                studentEmail: feedbackData ? feedbackData.studentEmail : 'unknown@example.com',
-                studentRollNumber: feedbackData ? feedbackData.studentRollNumber : 'N/A',
+                studentName: feedbackData ? feedbackData.studentName : extractedName,
+                studentEmail: feedbackData ? feedbackData.studentEmail : extractedEmail,
+                studentRollNumber: feedbackData ? feedbackData.studentRollNumber : extractedRoll,
                 studentCollege: feedbackData ? feedbackData.studentCollege : 'Unknown College',
                 submissionDate: feedbackData ? feedbackData.submissionDate : stats.mtime,
                 filePath: `uploads/${file}`,
@@ -302,22 +327,134 @@ router.get('/download-resume/:studentEmail', resumeAuth, async (req, res) => {
         );
         
         // Try to find a file that matches the student email
-        // This is a simple matching approach - in production you'd have better mapping
+        // First, try to find the user in database to get their name
         let matchingFile = null;
         
         if (studentEmail !== 'unknown@example.com') {
-            const emailPrefix = studentEmail.split('@')[0].toLowerCase();
-            matchingFile = resumeFiles.find(file => 
-                file.toLowerCase().includes(emailPrefix)
-            );
+            try {
+                // Find user by email to get their full name
+                console.log(`Looking for resume for student: ${studentEmail}`);
+                const user = await User.findOne({ email: studentEmail }).select('fullName rollNumber resume');
+                console.log(`Found user:`, user ? `${user.fullName} (${user.rollNumber})` : 'Not found');
+                
+                if (user) {
+                    // Create the expected filename pattern based on our naming convention
+                    const sanitizedName = user.fullName
+                        .replace(/[^a-zA-Z0-9\s]/g, '')
+                        .replace(/\s+/g, '_')
+                        .toLowerCase();
+                    
+                    const rollNumber = user.rollNumber || 'no_roll';
+                    
+                    // Look for files that match the user's name and roll number pattern
+                    console.log(`Looking for pattern: ${sanitizedName}_${rollNumber}_`);
+                    console.log(`Available files: ${resumeFiles.join(', ')}`);
+                    
+                    matchingFile = resumeFiles.find(file => {
+                        const fileName = file.toLowerCase();
+                        const exactMatch = fileName.startsWith(`${sanitizedName}_${rollNumber}_`);
+                        const partialMatch = fileName.includes(sanitizedName) && fileName.includes(rollNumber);
+                        console.log(`Checking file: ${file} - Exact: ${exactMatch}, Partial: ${partialMatch}`);
+                        return exactMatch || partialMatch;
+                    });
+                    
+                    console.log(`Matched file: ${matchingFile || 'None'}`);
+                    
+                    // Also check if user has resume field pointing to this file
+                    if (!matchingFile && user.resume) {
+                        const resumeFileName = user.resume.split('/').pop();
+                        if (resumeFiles.includes(resumeFileName)) {
+                            matchingFile = resumeFileName;
+                        }
+                    }
+                }
+                
+                // Fallback: try to match by email prefix if name-based matching fails
+                if (!matchingFile) {
+                    const emailPrefix = studentEmail.split('@')[0].toLowerCase();
+                    matchingFile = resumeFiles.find(file => 
+                        file.toLowerCase().includes(emailPrefix)
+                    );
+                }
+            } catch (err) {
+                console.error('Error finding user for resume download:', err);
+                // Fallback to email prefix matching
+                const emailPrefix = studentEmail.split('@')[0].toLowerCase();
+                matchingFile = resumeFiles.find(file => 
+                    file.toLowerCase().includes(emailPrefix)
+                );
+            }
         }
         
-        // If no specific match, just return the first available file for demo purposes
-        if (!matchingFile && resumeFiles.length > 0) {
-            matchingFile = resumeFiles[0];
+        // If no specific match found, don't return a random file
+        // This prevents downloading wrong student's resume
+        if (!matchingFile) {
+            console.log(`No resume found for student: ${studentEmail}`);
+            console.log(`Available files: ${resumeFiles.join(', ')}`);
         }
         
         if (!matchingFile) {
+            return res.status(404).json({ message: 'Resume not found for this student' });
+        }
+        
+        const fullPath = path.join(uploadsDir, matchingFile);
+        
+        // Set appropriate headers for download
+        res.setHeader('Content-Disposition', `attachment; filename="${matchingFile}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        
+        // Send file
+        res.sendFile(fullPath);
+    } catch (error) {
+        console.error('Error downloading resume:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/download-resume-by-name/:studentName
+// @desc    Download a resume by student name
+// @access  Private (Resume Dashboard)
+router.get('/download-resume-by-name/:studentName', resumeAuth, async (req, res) => {
+    try {
+        const { studentName } = req.params;
+        console.log(`Looking for resume for student: ${studentName}`);
+        
+        // Read files from uploads directory
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        
+        if (!fs.existsSync(uploadsDir)) {
+            return res.status(404).json({ message: 'Uploads directory not found' });
+        }
+        
+        const files = fs.readdirSync(uploadsDir);
+        const resumeFiles = files.filter(file => 
+            file.toLowerCase().endsWith('.pdf') || 
+            file.toLowerCase().endsWith('.doc') || 
+            file.toLowerCase().endsWith('.docx')
+        );
+        
+        console.log(`Available files: ${resumeFiles.join(', ')}`);
+        
+        // Create sanitized name pattern to match filename
+        const sanitizedName = studentName
+            .toLowerCase()
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .replace(/\s+/g, '_');
+        
+        console.log(`Looking for pattern: ${sanitizedName}`);
+        
+        // Find file that starts with the student's name
+        const matchingFile = resumeFiles.find(file => {
+            const fileName = file.toLowerCase();
+            const fileStartsWithName = fileName.startsWith(sanitizedName);
+            console.log(`Checking file: ${file} - Starts with name: ${fileStartsWithName}`);
+            return fileStartsWithName;
+        });
+        
+        console.log(`Matched file: ${matchingFile || 'None'}`);
+        
+        if (!matchingFile) {
+            console.log(`No resume found for student: ${studentName}`);
             return res.status(404).json({ message: 'Resume not found for this student' });
         }
         
