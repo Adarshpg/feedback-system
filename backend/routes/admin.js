@@ -162,13 +162,29 @@ router.get('/resumes', resumeAuth, async (req, res) => {
             );
         }
 
-        // Since semester field is a Number in the schema, we'll skip the Feedback query
-        // and work directly with files and try to match them with users
+        // Try to get resume data from Feedback collection with different approach
+        // Check if there are any feedback records that might contain resume info
+        let feedbackResumes = [];
+        try {
+            // Try to find feedback records that might contain resume upload info
+            feedbackResumes = await Feedback.find({
+                $or: [
+                    { 'responses.filePath': { $exists: true } },
+                    { 'responses.fileName': { $exists: true } }
+                ]
+            }).select('studentName studentEmail studentRollNumber studentCollege submittedAt responses');
+            console.log('Found feedback records with file info:', feedbackResumes.length);
+        } catch (err) {
+            console.log('Could not query feedback collection:', err.message);
+        }
         
         // Get users who have uploaded resumes (have resume field populated)
         const usersWithResumes = await User.find({
             resume: { $ne: null, $ne: '' }
         }).select('fullName email rollNumber collegeName resume updatedAt');
+        
+        console.log('Found users with resumes:', usersWithResumes.length);
+        console.log('Resume files in directory:', resumeFiles);
         
         // Create resume data from users who have uploaded resumes
         let allResumes = [];
@@ -177,6 +193,8 @@ router.get('/resumes', resumeAuth, async (req, res) => {
         for (const user of usersWithResumes) {
             const resumePath = user.resume;
             const fileName = resumePath ? resumePath.split('/').pop() : null;
+            
+            console.log(`User: ${user.fullName}, Resume path: ${resumePath}, File name: ${fileName}`);
             
             // Check if the file actually exists in uploads directory
             if (fileName && resumeFiles.includes(fileName)) {
@@ -193,6 +211,27 @@ router.get('/resumes', resumeAuth, async (req, res) => {
             }
         }
         
+        console.log('Matched resumes from users:', allResumes.length);
+        
+        // Also try to match using feedback records
+        const feedbackFileMap = new Map();
+        feedbackResumes.forEach(feedback => {
+            if (feedback.responses && feedback.responses.filePath) {
+                const fileName = feedback.responses.filePath.split('/').pop();
+                if (resumeFiles.includes(fileName)) {
+                    feedbackFileMap.set(fileName, {
+                        studentName: feedback.studentName || 'Unknown Student',
+                        studentEmail: feedback.studentEmail || 'unknown@example.com',
+                        studentRollNumber: feedback.studentRollNumber || 'N/A',
+                        studentCollege: feedback.studentCollege || 'Unknown College',
+                        submissionDate: feedback.submittedAt || new Date()
+                    });
+                }
+            }
+        });
+        
+        console.log('Matched resumes from feedback:', feedbackFileMap.size);
+        
         // Then add any remaining files that couldn't be matched to users
         const matchedFiles = allResumes.map(resume => resume.fileName);
         const unmatchedFiles = resumeFiles.filter(file => !matchedFiles.includes(file));
@@ -201,13 +240,16 @@ router.get('/resumes', resumeAuth, async (req, res) => {
             const filePath = path.join(uploadsDir, file);
             const stats = fs.statSync(filePath);
             
+            // Check if we have feedback data for this file
+            const feedbackData = feedbackFileMap.get(file);
+            
             allResumes.push({
                 _id: file,
-                studentName: 'Unknown Student',
-                studentEmail: 'unknown@example.com',
-                studentRollNumber: 'N/A',
-                studentCollege: 'Unknown College',
-                submissionDate: stats.mtime,
+                studentName: feedbackData ? feedbackData.studentName : 'Unknown Student',
+                studentEmail: feedbackData ? feedbackData.studentEmail : 'unknown@example.com',
+                studentRollNumber: feedbackData ? feedbackData.studentRollNumber : 'N/A',
+                studentCollege: feedbackData ? feedbackData.studentCollege : 'Unknown College',
+                submissionDate: feedbackData ? feedbackData.submissionDate : stats.mtime,
                 filePath: `uploads/${file}`,
                 fileName: file
             });

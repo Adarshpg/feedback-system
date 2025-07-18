@@ -3,10 +3,10 @@ import axios from 'axios';
 
 // Set base URL for API requests
 // For production deployment
-//const API_BASE_URL = 'https://feedback-system-1-jqqj.onrender.com/api';
+const API_BASE_URL = 'https://feedback-system-1-jqqj.onrender.com/api';
 
 // For local development
-const API_BASE_URL = 'http://localhost:5000/api';
+#const API_BASE_URL = 'http://localhost:5000/api';
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.withCredentials = true;
