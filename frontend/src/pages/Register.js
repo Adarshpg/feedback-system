@@ -1,3 +1,4 @@
+// In Register.js
 import React, { useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
@@ -13,115 +14,151 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  MenuItem,
+  Grid,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
   FormHelperText,
-  Grid,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import { 
+  Lock, 
+  Email, 
+  Person, 
+  Phone, 
+  School, 
+  CalendarToday, 
+  Visibility, 
+  VisibilityOff,
+  Badge,
+  Class,
+  Event
+} from '@mui/icons-material';
 
-// Styled components using the new MUI v5 approach
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  margin: theme.spacing(2, 0, 8, 0),
+// Styled Components
+const StyledContainer = styled(Container)(({ theme }) => ({
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  padding: theme.spacing(3),
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'url("/bg-pattern.png") center/cover',
+    opacity: 0.05,
+    pointerEvents: 'none'
+  }
+}));
+
+const GlassCard = styled(Paper)(({ theme }) => ({
+  width: '100%',
+  maxWidth: 1000,
+  borderRadius: 20,
+  overflow: 'hidden',
+  display: 'flex',
+  boxShadow: '0 15px 35px rgba(0, 0, 0, 0.2)',
+  backdropFilter: 'blur(10px)',
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  [theme.breakpoints.down('md')]: {
+    flexDirection: 'column',
+    maxWidth: 500
+  }
+}));
+
+const FormSection = styled(Box)(({ theme }) => ({
+  flex: 1,
+  padding: theme.spacing(6, 4),
+  background: '#fff',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  [theme.breakpoints.down('sm')]: {
-    padding: theme.spacing(2),
-    margin: theme.spacing(1, 0, 4, 0),
-  },
+  justifyContent: 'center'
 }));
-
-const StyledForm = styled('form')({
-  width: '100%',
-  marginTop: 1,
-});
-
-const StyledSubmitButton = styled(Button)(({ theme }) => ({
-  margin: theme.spacing(3, 0, 2),
-}));
-
-const StyledContainer = styled(Container)({
-  marginTop: 4,
-  padding: theme => theme.spacing(3, 0),
-});
 
 const ContentSection = styled(Box)(({ theme }) => ({
+  flex: 1,
+  padding: theme.spacing(6, 4),
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  color: 'white',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  height: '100%',
-  padding: theme.spacing(4),
-  backgroundColor: '#ffffff',
-  color: theme.palette.text.primary,
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: theme.shadows[3],
-  '& h2, & h3, & p, & li': {
-    color: theme.palette.text.primary,
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.1)'
+  }
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    '&:hover fieldset': {
+      borderColor: theme.palette.primary.light,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: theme.palette.primary.main,
+      boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.2)',
+    },
   },
-  '& ul': {
-    paddingLeft: theme.spacing(2),
-    margin: 0,
-    '& li': {
-      color: theme.palette.text.secondary,
-      marginBottom: theme.spacing(1.5),
-    }
+  marginBottom: theme.spacing(3),
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
   },
-  '& .MuiButton-outlined': {
-    borderColor: theme.palette.primary.main,
+  '& .MuiInputLabel-root.Mui-focused': {
     color: theme.palette.primary.main,
-    '&:hover': {
-      backgroundColor: theme.palette.action.hover,
-      borderColor: theme.palette.primary.dark,
-    }
   },
-  [theme.breakpoints.down('sm')]: {
-    padding: theme.spacing(2),
-    '& h2': {
-      fontSize: '1.5rem',
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  padding: '14px 28px',
+  borderRadius: 12,
+  fontWeight: 600,
+  textTransform: 'none',
+  fontSize: '1rem',
+  marginTop: theme.spacing(2),
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&.MuiButton-contained': {
+    background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
     },
-    '& h3': {
-      fontSize: '1.2rem',
-    },
-    '& p': {
-      fontSize: '0.9rem',
+    '&:active': {
+      transform: 'translateY(0)',
     },
   },
 }));
 
-const FormSection = styled(Box)({
-  padding: theme => theme.spacing(0, 3),
-});
-
-const StyledFormControl = styled(FormControl)({
-  width: '100%',
-  marginTop: 1,
-  marginBottom: 1,
-});
-
 const validationSchema = Yup.object({
-  fullName: Yup.string()
-    .min(3, 'Full name must be at least 3 characters')
-    .required('Full Name is required'),
-  email: Yup.string()
-    .email('Invalid email address')
-    .min(6, 'Email must be at least 6 characters')
-    .required('Email is required'),
+  fullName: Yup.string().required('Full Name is required'),
+  email: Yup.string().email('Invalid email').required('Email is required'),
   rollNumber: Yup.string().required('Roll Number is required'),
   collegeName: Yup.string().required('College Name is required'),
   contactNo: Yup.string()
-    .matches(/^[0-9]{10}$/, 'Contact number must be 10 digits')
+    .matches(/^[0-9]{10}$/, 'Invalid contact number')
     .required('Contact Number is required'),
-  dateOfBirth: Yup.date()
-    .required('Date of Birth is required')
-    .max(new Date(), 'Date of Birth cannot be in the future'),
-  course: Yup.string().required('Course is required'),
-  semester: Yup.number().required('Semester is required').min(1, 'Semester must be at least 1').max(8, 'Semester cannot be greater than 8'),
+  dateOfBirth: Yup.date().required('Date of Birth is required'),
+  semester: Yup.number().required('Semester is required'),
   password: Yup.string()
-    .min(6, 'Password must be at least 6 characters')
+    .min(8, 'Password must be at least 8 characters')
     .required('Password is required'),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref('password'), null], 'Passwords must match')
@@ -129,13 +166,12 @@ const validationSchema = Yup.object({
 });
 
 const Register = () => {
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const semesters = Array.from({ length: 8 }, (_, i) => i + 1);
 
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [formError, setFormError] = useState('');
-  
   const formik = useFormik({
     initialValues: {
       fullName: '',
@@ -144,26 +180,15 @@ const Register = () => {
       collegeName: '',
       contactNo: '',
       dateOfBirth: '',
-      course: '',
       semester: '',
       password: '',
       confirmPassword: '',
     },
-    validationSchema: validationSchema,
-    validateOnBlur: true,
-    validateOnChange: false,
+    validationSchema,
     onSubmit: async (values, { setFieldError }) => {
-      setFormError('');
-      setFieldErrors({});
       setLoading(true);
-
       try {
-        const { confirmPassword, ...rest } = values;
-        const userData = {
-          ...rest,
-          semester: parseInt(rest.semester, 10) || null,
-        };
-        
+        const { confirmPassword, ...userData } = values;
         const result = await register(userData);
         
         if (result.success) {
@@ -172,172 +197,185 @@ const Register = () => {
           });
         } else {
           if (result.field) {
-            // Set field-specific error
             setFieldError(result.field, result.message);
-            setFieldErrors(prev => ({
-              ...prev,
-              [result.field]: result.message
-            }));
-          } else if (result.isValidationError) {
-            // Handle server-side validation errors
-            setFormError(result.message);
-          } else {
-            setFormError(result.message || 'Registration failed');
           }
         }
-      } catch (err) {
-        console.error('Registration error:', err);
-        setFormError('An unexpected error occurred. Please try again.');
+      } catch (error) {
+        console.error('Registration error:', error);
       } finally {
         setLoading(false);
       }
     },
   });
 
-  const semesters = Array.from({ length: 8 }, (_, i) => i + 1); // Semesters 1-8
-
   return (
-    <StyledContainer component="main" maxWidth="lg">
-      <Grid container spacing={{ xs: 2, md: 4 }}>
-        <Grid item xs={12} md={6}>
-          <FormSection>
-            <StyledPaper elevation={3}>
-              <Typography component="h1" variant="h5" align="center" gutterBottom>
+    <StyledContainer component="main" maxWidth="xl">
+      <GlassCard elevation={3}>
+        <FormSection>
+          <Box mb={4} textAlign="center">
+            <Box mb={4} textAlign="center">
+              <Typography variant="h4" component="h1" gutterBottom fontWeight="bold" color="primary">
                 Create an Account
               </Typography>
-          
-          {formError && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {formError}
-            </Alert>
-          )}
-          
-          <StyledForm onSubmit={formik.handleSubmit}>
+              <Typography variant="body1" color="textSecondary" paragraph>
+                Join us today and start your journey
+              </Typography>
+            </Box>
+          </Box>
+
+          <form onSubmit={formik.handleSubmit}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField
+                <StyledTextField
                   fullWidth
                   id="fullName"
                   name="fullName"
-                  label="Full Name *"
+                  label="Full Name"
                   value={formik.values.fullName}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.fullName && Boolean(formik.errors.fullName)}
                   helperText={formik.touched.fullName && formik.errors.fullName}
-                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Person color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
+
+              <Grid item xs={12}>
+                <StyledTextField
                   fullWidth
                   id="email"
                   name="email"
-                  label="Email *"
+                  label="Email Address"
                   value={formik.values.email}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={(formik.touched.email && Boolean(formik.errors.email)) || Boolean(fieldErrors.email)}
-                  helperText={(formik.touched.email && formik.errors.email) || fieldErrors.email}
-                  margin="normal"
+                  error={formik.touched.email && Boolean(formik.errors.email)}
+                  helperText={formik.touched.email && formik.errors.email}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
-                <TextField
+                <StyledTextField
                   fullWidth
                   id="rollNumber"
                   name="rollNumber"
-                  label="Roll Number *"
+                  label="Roll Number"
                   value={formik.values.rollNumber}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.rollNumber && Boolean(formik.errors.rollNumber)}
                   helperText={formik.touched.rollNumber && formik.errors.rollNumber}
-                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <School color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  id="collegeName"
-                  name="collegeName"
-                  label="College Name *"
-                  value={formik.values.collegeName}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.collegeName && Boolean(formik.errors.collegeName)}
-                  helperText={formik.touched.collegeName && formik.errors.collegeName}
-                  margin="normal"
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
+                <StyledTextField
                   fullWidth
                   id="contactNo"
                   name="contactNo"
-                  label="Contact No *"
+                  label="Contact Number"
                   value={formik.values.contactNo}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={(formik.touched.contactNo && Boolean(formik.errors.contactNo)) || Boolean(fieldErrors.contactNo)}
-                  helperText={(formik.touched.contactNo && formik.errors.contactNo) || fieldErrors.contactNo}
-                  margin="normal"
+                  error={formik.touched.contactNo && Boolean(formik.errors.contactNo)}
+                  helperText={formik.touched.contactNo && formik.errors.contactNo}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Phone color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
-                <TextField
+                <StyledTextField
                   fullWidth
                   id="dateOfBirth"
                   name="dateOfBirth"
-                  label="Date of Birth *"
+                  label="Date of Birth"
                   type="date"
                   value={formik.values.dateOfBirth}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.dateOfBirth && Boolean(formik.errors.dateOfBirth)}
                   helperText={formik.touched.dateOfBirth && formik.errors.dateOfBirth}
-                  margin="normal"
                   InputLabelProps={{
                     shrink: true,
                   }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CalendarToday color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  id="course"
-                  name="course"
-                  label="Course *"
-                  value={formik.values.course}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.course && Boolean(formik.errors.course)}
-                  helperText={formik.touched.course && formik.errors.course}
-                  margin="normal"
-                />
-              </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <FormControl
                   fullWidth
+                  variant="outlined"
+                  margin="normal"
+                  error={formik.touched.course && Boolean(formik.errors.course)}
+                >
+                  <InputLabel>Course</InputLabel>
+                  <Select
+                    name="course"
+                    value={formik.values.course}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label="Course"
+                  >
+                    <MenuItem value="B.Tech">B.Tech</MenuItem>
+                    <MenuItem value="BBA">BBA</MenuItem>
+                    <MenuItem value="BCA">BCA</MenuItem>
+                    <MenuItem value="MBA">MBA</MenuItem>
+                    <MenuItem value="MCA">MCA</MenuItem>
+                    <MenuItem value="M.Tech">M.Tech</MenuItem>
+                  </Select>
+                  {formik.touched.course && formik.errors.course && (
+                    <FormHelperText>{formik.errors.course}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <FormControl
+                  fullWidth
+                  variant="outlined"
                   margin="normal"
                   error={formik.touched.semester && Boolean(formik.errors.semester)}
                 >
-                  <InputLabel id="semester-label">Semester *</InputLabel>
+                  <InputLabel>Semester</InputLabel>
                   <Select
-                    labelId="semester-label"
-                    id="semester"
                     name="semester"
                     value={formik.values.semester}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    label="Semester *"
+                    label="Semester"
                   >
                     {semesters.map((sem) => (
                       <MenuItem key={sem} value={sem}>
@@ -346,98 +384,218 @@ const Register = () => {
                     ))}
                   </Select>
                   {formik.touched.semester && formik.errors.semester && (
-                    <FormHelperText error>{formik.errors.semester}</FormHelperText>
+                    <FormHelperText>{formik.errors.semester}</FormHelperText>
                   )}
                 </FormControl>
               </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
+
+              <Grid item xs={12}>
+                <StyledTextField
+                  fullWidth
+                  id="collegeName"
+                  name="collegeName"
+                  label="College Name"
+                  value={formik.values.collegeName}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.collegeName && Boolean(formik.errors.collegeName)}
+                  helperText={formik.touched.collegeName && formik.errors.collegeName}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <School color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <StyledTextField
                   fullWidth
                   id="password"
                   name="password"
-                  label="Password *"
-                  type="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formik.values.password}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={formik.touched.password && Boolean(formik.errors.password)}
                   helperText={formik.touched.password && formik.errors.password}
-                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
+
+              <Grid item xs={12}>
+                <StyledTextField
                   fullWidth
                   id="confirmPassword"
                   name="confirmPassword"
-                  label="Confirm Password *"
-                  type="password"
+                  label="Confirm Password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formik.values.confirmPassword}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
-                    formik.touched.confirmPassword &&
-                    Boolean(formik.errors.confirmPassword)
+                    formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)
                   }
                   helperText={
                     formik.touched.confirmPassword && formik.errors.confirmPassword
                   }
-                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
             </Grid>
-            
-            <StyledSubmitButton
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              disabled={loading || !formik.isValid}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Create Account'}
-            </StyledSubmitButton>
-            
-            <Box textAlign="center" mt={2}>
-              <Typography variant="body2">
+
+            <Grid item xs={12} sx={{ mt: 2 }}>
+              <StyledButton
+                fullWidth
+                variant="contained"
+                type="submit"
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                size="large"
+              >
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </StyledButton>
+            </Grid>
+
+            <Box textAlign="center">
+              <Typography variant="body2" color="textSecondary">
                 Already have an account?{' '}
-                <Link component={RouterLink} to="/login" variant="body2">
+                <Link component={RouterLink} to="/login" color="primary">
                   Sign In
                 </Link>
               </Typography>
             </Box>
-          </StyledForm>
-            </StyledPaper>
-          </FormSection>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <ContentSection>
-            <Typography variant="h4" gutterBottom>
-              Welcome to Our Feedback System
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Join thousands of students who are improving their learning experience through valuable feedback.
-            </Typography>
-            
-            <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
-              Why Register?
-            </Typography>
-            <ul>
-              <li>Provide feedback at key milestones of your course</li>
-              <li>Help improve course content and delivery</li>
-              <li>Track your feedback history</li>
-              <li>Contribute to better education for everyone</li>
-            </ul>
+          </form>
+        </FormSection>
 
-            <Box mt={4}>
-              <Typography variant="body2" fontStyle="italic">
-                Your feedback helps us create a better learning environment for everyone.
+        <ContentSection>
+          <Box position="relative" zIndex={1} p={4}>
+            <Box position="relative" zIndex={1} textAlign="center">
+              <Typography variant="h3" component="h2" gutterBottom fontWeight="bold">
+                Welcome Back!
               </Typography>
+              <Typography variant="body1" paragraph sx={{ mb: 4, opacity: 0.9 }}>
+                To keep connected with us, please login with your personal info
+              </Typography>
+              <Button
+                component={RouterLink}
+                to="/login"
+                variant="outlined"
+                color="inherit"
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  borderWidth: 2,
+                  borderRadius: 12,
+                  fontWeight: 600,
+                  '&:hover': {
+                    borderWidth: 2,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                Sign In
+              </Button>
             </Box>
-          </ContentSection>
-        </Grid>
-      </Grid>
+
+            <Box mt={6}>
+              <Typography variant="h6" gutterBottom fontWeight="bold" textAlign="center">
+                Why join us?
+              </Typography>
+              
+              <Box display="flex" alignItems="center" mb={3}>
+                <Box
+                  bgcolor="rgba(255,255,255,0.2)"
+                  width={32}
+                  height={32}
+                  borderRadius="50%"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  mr={2}
+                  flexShrink={0}
+                >
+                  <Typography variant="body2" fontWeight="bold">1</Typography>
+                </Box>
+                <Typography>Access to exclusive resources</Typography>
+              </Box>
+              
+              <Box display="flex" alignItems="center" mb={3}>
+                <Box
+                  bgcolor="rgba(255,255,255,0.2)"
+                  width={32}
+                  height={32}
+                  borderRadius="50%"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  mr={2}
+                  flexShrink={0}
+                >
+                  <Typography variant="body2" fontWeight="bold">2</Typography>
+                </Box>
+                <Typography>Connect with peers and mentors</Typography>
+              </Box>
+              
+              <Box display="flex" alignItems="center">
+                <Box
+                  bgcolor="rgba(255,255,255,0.2)"
+                  width={32}
+                  height={32}
+                  borderRadius="50%"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  mr={2}
+                  flexShrink={0}
+                >
+                  <Typography variant="body2" fontWeight="bold">3</Typography>
+                </Box>
+                <Typography>Track your academic progress</Typography>
+              </Box>
+            </Box>
+          </Box>
+        </ContentSection>
+      </GlassCard>
     </StyledContainer>
   );
 };
