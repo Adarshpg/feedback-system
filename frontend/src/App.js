@@ -89,16 +89,22 @@ const theme = createTheme({
   },
 });
 
-// Private Route component
+// Private Route component for regular user authentication
 const PrivateRoute = ({ children }) => {
   const { currentUser } = useAuth();
   return currentUser ? children : <Navigate to="/login" />;
 };
 
-// Protected Route component
+// Protected Route for resumes dashboard authentication
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('resumesAuth') === 'true';
   return isAuthenticated ? children : <Navigate to="/resumesdashboard/login" />;
+};
+
+// Redirect to login if trying to access login page while already authenticated
+const ResumesLoginRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('resumesAuth') === 'true';
+  return isAuthenticated ? <Navigate to="/resumesdashboard" /> : children;
 };
 
 function App() {
@@ -108,10 +114,13 @@ function App() {
         <div className="App">
           <Navbar />
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Register />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Protected User Routes */}
             <Route
               path="/dashboard"
               element={
@@ -128,15 +137,27 @@ function App() {
                 </PrivateRoute>
               }
             />
-            <Route path="/resumesdashboard/login" element={<ResumesDashboardLogin />} />
+
+            {/* Resumes Dashboard Routes */}
+            <Route 
+              path="/resumesdashboard/login" 
+              element={
+                <ResumesLoginRoute>
+                  <ResumesDashboardLogin />
+                </ResumesLoginRoute>
+              } 
+            />
             <Route
-              path="/resumesdashboard"
+              path="/resumesdashboard/*"
               element={
                 <ProtectedRoute>
                   <ResumesDashboard />
                 </ProtectedRoute>
               }
             />
+
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </AuthProvider>

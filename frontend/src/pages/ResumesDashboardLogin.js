@@ -1,22 +1,11 @@
+// src/pages/ResumesDashboardLogin.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Container, 
-  Paper, 
-  Typography, 
-  TextField, 
-  Button, 
-  Box, 
-  Alert,
-  Avatar,
-  CssBaseline
+import {
+  Container, Box, TextField, Button, Typography, Paper, Avatar,
+  CssBaseline, Alert
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-
-const FIXED_CREDENTIALS = { 
-  username: 'admin', 
-  password: 'resume@123' 
-};
 
 const ResumesDashboardLogin = () => {
   const [username, setUsername] = useState('');
@@ -24,13 +13,14 @@ const ResumesDashboardLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (username === FIXED_CREDENTIALS.username && password === FIXED_CREDENTIALS.password) {
+    // Replace these with your actual admin credentials
+    if (username === 'admin' && password === 'admin123') {
       localStorage.setItem('resumesAuth', 'true');
-      navigate('/resumesdashboard');
+      navigate('/resumes-dashboard');
     } else {
-      setError('Invalid credentials. Use admin/resume@123');
+      setError('Invalid credentials');
     }
   };
 
@@ -45,47 +35,49 @@ const ResumesDashboardLogin = () => {
           alignItems: 'center',
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
           Resumes Dashboard Login
         </Typography>
-        <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
+        <Paper elevation={3} sx={{ mt: 3, p: 3, width: '100%' }}>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="username"
-            label="Username"
-            name="username"
-            autoComplete="username"
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Password"
-            type="password"
-            id="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            Sign In
-          </Button>
-        </Box>
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="username"
+              label="Username"
+              name="username"
+              autoComplete="username"
+              autoFocus
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+            >
+              Sign In
+            </Button>
+          </Box>
+        </Paper>
       </Box>
     </Container>
   );

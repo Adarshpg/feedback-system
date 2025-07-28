@@ -131,17 +131,16 @@ const questionsBySemester = {
       ]
     },
     {
-      id: 'role',
+      id: 'progress_experience',
       type: 'radio',
-      question: 'What is your primary role in your organization?',
+      question: 'How would you rate your learning progress so far?',
       required: true,
       options: [
-        { value: 'entry', label: 'Entry-level Employee' },
-        { value: 'mid', label: 'Mid-level Manager' },
-        { value: 'senior', label: 'Senior Management' },
-        { value: 'executive', label: 'Executive/C-level' },
-        { value: 'founder', label: 'Founder/Entrepreneur' },
-        { value: 'other_role', label: 'Other (please specify)' }
+        { value: 'excellent', label: 'Excellent - Exceeding my expectations' },
+        { value: 'good', label: 'Good - Meeting my expectations' },
+        { value: 'average', label: 'Average - Some room for improvement' },
+        { value: 'needs_improvement', label: 'Needs Improvement - Not meeting my expectations' },
+        { value: 'not_sure', label: 'Not sure yet' }
       ]
     },
     {
@@ -240,16 +239,6 @@ const questionsBySemester = {
       scaleLabels: {
         left: 'Very bad',
         right: 'Very good'
-      }
-    },
-    {
-      id: 'continue_learning',
-      type: 'scale',
-      question: 'How likely or unlikely are you to continue learning this software?',
-      required: true,
-      scaleLabels: {
-        left: 'Not at all Likely',
-        right: 'Extremely Likely'
       }
     },
     {
@@ -942,28 +931,193 @@ const FeedbackForm = () => {
           </form>
         </Paper>
       </Container>
+{/* Success Dialog */}
+<Dialog
+  open={showSuccessDialog}
+  onClose={() => setShowSuccessDialog(false)}
+  aria-labelledby="success-dialog-title"
+  maxWidth="sm"
+  fullWidth
+  PaperProps={{
+    sx: {
+      borderRadius: 3,
+      overflow: 'hidden',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%)',
+      position: 'relative',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 8,
+        background: 'linear-gradient(90deg, #4CAF50, #8BC34A)'
+      }
+    }
+  }}
+>
+  <Box
+    sx={{
+      p: 4,
+      textAlign: 'center',
+      position: 'relative',
+      zIndex: 1
+    }}
+  >
+    <Box
+      sx={{
+        width: 100,
+        height: 100,
+        margin: '0 auto 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '50%',
+        background: 'rgba(76, 175, 80, 0.1)',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          border: '2px solid #4CAF50',
+          animation: 'ripple 1.5s ease-out infinite',
+          '@keyframes ripple': {
+            '0%': {
+              transform: 'scale(0.8)',
+              opacity: 0.7
+            },
+            '70%': {
+              transform: 'scale(1.3)',
+              opacity: 0
+            },
+            '100%': {
+              opacity: 0
+            }
+          }
+        }
+      }}
+    >
+      <CheckCircleOutlineIcon
+        sx={{
+          fontSize: 60,
+          color: '#4CAF50',
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+        }}
+      />
+    </Box>
 
-      {/* Success Dialog */}
-      <Dialog
-        open={showSuccessDialog}
-        onClose={() => setShowSuccessDialog(false)}
-        aria-labelledby="success-dialog-title"
-        maxWidth="sm"
-        fullWidth
+    <Typography
+      variant="h4"
+      component="h2"
+      gutterBottom
+      sx={{
+        fontWeight: 700,
+        color: '#2E7D32',
+        mb: 2,
+        background: 'linear-gradient(90deg, #2E7D32, #4CAF50)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text'
+      }}
+    >
+      Thank You! 🎉
+    </Typography>
+
+    <Typography
+      variant="h6"
+      sx={{
+        color: '#455A64',
+        mb: 3,
+        lineHeight: 1.6,
+        maxWidth: '90%',
+        mx: 'auto'
+      }}
+    >
+      Your feedback is invaluable to us!
+    </Typography>
+
+    <Typography
+      variant="body1"
+      sx={{
+        color: '#607D8B',
+        mb: 4,
+        lineHeight: 1.8,
+        maxWidth: '90%',
+        mx: 'auto'
+      }}
+    >
+      We truly appreciate you taking the time to share your thoughts. Your feedback helps us improve and create a better experience for everyone.
+    </Typography>
+
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        mt: 3,
+        mb: 1
+      }}
+    >
+      <CircularProgress
+        size={20}
+        thickness={4}
+        sx={{ color: '#4CAF50', mr: 2 }}
+      />
+      <Typography
+        variant="body2"
+        sx={{
+          color: '#78909C',
+          fontWeight: 500,
+          fontSize: '0.95rem'
+        }}
       >
-        <Box className={classes.dialogContent}>
-          <CheckCircleOutlineIcon className={classes.successIcon} />
-          <Typography variant="h5" gutterBottom>
-            Thank You!
-          </Typography>
-          <Typography variant="body1" color="textSecondary" paragraph>
-            Your feedback has been submitted successfully.
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Redirecting to dashboard...
-          </Typography>
-        </Box>
-      </Dialog>
+        Redirecting you to dashboard...
+      </Typography>
+    </Box>
+
+    <Box
+      sx={{
+        mt: 4,
+        pt: 3,
+        borderTop: '1px solid rgba(0,0,0,0.05)',
+        '& svg': {
+          color: '#4CAF50',
+          fontSize: '1.8rem',
+          mx: 0.5,
+          transition: 'transform 0.3s',
+          '&:hover': {
+            transform: 'translateY(-3px)'
+          }
+        }
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{
+          display: 'block',
+          color: '#78909C',
+          mb: 2,
+          fontSize: '0.85rem'
+        }}
+      >
+        Share your experience
+      </Typography>
+      <Box sx={{ '& > *': { mx: 1 } }}>
+        <IconButton size="small">
+          <span>👍</span>
+        </IconButton>
+        <IconButton size="small">
+          <span>❤️</span>
+        </IconButton>
+        <IconButton size="small">
+          <span>👏</span>
+        </IconButton>
+      </Box>
+    </Box>
+  </Box>
+</Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog
